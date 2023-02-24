@@ -1,0 +1,521 @@
+---
+title: "Acetate fluxes in Escherichia coli"
+author: "CRISCI Emma"
+date: "`r SysDate()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo <-TRUE)
+```
+
+Modelisation of the system describe in Acetate fluxes in Escherichia coli are determined by the
+thermodynamic control of the Pta-AckA pathway Brice Enjalbert, Pierre Millard, Mickael Dinclaux, Jean-Charles Portais,
+Fabien Letisse
+
+Library Import
+```{r}
+library(deSolve)
+library(phaseR)
+```
+
+# Variable definition
+we make 3 table with the paramete
+
+```{r}
+#library( Rmatlab)
+#donnees <- readMat("C:/Emma/Stage_GB5_LBBE/FinalModels/flux_noDrugsm")
+```
+
+## Parameters Definition
+
+### Flux Parameters
+```{r, echo=FALSE}
+
+vm<- c(001,76E-4,00015 , 107E-3,000138 ,60E-9 ,15e-05 ,13e-05 ,23e-05 ,71e-05 ,88e-05 ,39e-05 ,000026 ,00004 ,95e-05 ,000021 ,13e-05 ,254E-6 ,12e-06 ,17e-4 ,62e-06 ,78e-05 ,000013 ,19e-05 ,18e-06 ,85e-06 ,914e-4 ,14e-05 ,00089 ,29e-05 ,18e-08 ,26e-09 ,00461,19998e-09 ,19e-05 ,63e-05 ,000024 ,25e-06 ,12e-08 ,000035 ,295e-05 ,24e-05 ) 
+name_vm <- c('vmax_VHK','vmax_VPGI','vmax_VPFK','vmax_VPGK','vmax_VPK','vmax_VLDH','vmax_VG6PDH','vmax_VEP','vmax_VTK','vmax_VPDH','vmax_VCS','vmax_VCITS','vmax_VAKGDH','vmax_VSDH','vmax_VMLD','vmax_VPC','vmax_VME','vmax_VGlnT','vmax_VGLDH','vmax_VAlaTA','vmax_VASN','vmax_VASTA','vmax_VAAtoSUC','vmax_VHISARGTA','vmax_VGluT','vmax_VSDHH','vmax_VATPase','vmax_VNADPHox','vmax_Vresp','vmax_Vleak','vmax_VAK','vmax_VPPRibP','vmax_Vgrowth','vmaxr_VLDH','vmaxr_VGlnT','vmaxr_VGLDH','vmaxr_VAlaTA','vmaxr_VGluT','vmaxr_VAK','vmaxr_VPGI','vmax_VPALM','vmax_VACL') 
+tvm <- t( data.frame(vm))
+colnames(tvm)=name_vm
+
+km<- c(3 ,01 ,01 ,001 ,001 ,0073 ,004 ,001 ,058 ,0038 ,0098 ,022 ,0048 ,005 ,001 ,00182548 ,001 ,01 ,005 ,0044586 ,000700637 ,01 ,001 ,0140127 ,0101911 ,0700637 ,0146497 ,05 ,01 ,001 ,01 ,001 ,0636943 ,1 ,02 ,000152866 ,01 ,00535032 ,5 ,02 ,83 ,0048 ,2 ,05 ,00103225 ,00042 ,00168556 ,00146417 ,00274893 ,00101028 ,00133139 ,00115531 ,00351315 ,000107979 ,000960848 ,00101713 ,00163977 ,001 ,717994e-05 ,630901e-07 ,000915637 ,00756376 ,000139129 ,168472e-06 ,00254777 ) 
+name_km <- c('km_EGLC','km_EGLN','km_LAC','km_NH4','km_ALA','km_ARG','km_ASP','km_ASN','km_HIS','km_ILE','km_LYS','km_SER','km_TYR','km_GLY','km_VAL','km_G6P','km_F6P','km_GAP','km_PEP','km_R5P','km_X5P','km_PYR','km_ACCOA','km_OXA','km_CIT','km_AKG','km_SUC','km_MAL','km_EGLU','km_GLU','km_CO2','km_O2','km_Pi','km_ATP','km_ADP','km_AMP','km_NADH','km_NADPH','km_ATP_ADP','km_ADP_ATP','km_NADH_NAD','km_NAD_NADH','km_NADP_NADPH','km_NADPH_NADP','km_ASPg','km_ASNg','km_HISg','km_ARGg','km_LYSg','km_ILEg','km_VALg','km_TYRg','km_METg','km_SERg','km_THRg','km_PROg','km_PHEg','km_GLYg','km_R5Pg','km_G6Pg','km_ATPg','km_ALAg','km_EGLNg','km_EGLUg','km_PALMg') 
+tkm <- t( data.frame(km))
+colnames(tkm)=name_km
+
+V_<- c(735e-05 ,879e-05 ,735e-05,0000122 ,0000101 ,0000189 ,0000119 ,907e-05 ,0000113 ,0000169 ,45e-05 ,0000102 ,000018 ,435e-05 ,69e-05 ,986e-05 ,0000165 ,0000122 ,573e-05 ,0000131 ,00119 ,00119 ) 
+name_V_ <- c('V_growth_R5P ','V_growth_G6P ','V_growth_PALM','V_growth_EGLU','V_growth_EGLN','V_growth_ALA','V_growth_ARG','V_growth_ASN','V_growth_ASP','V_growth_GLY','V_growth_HIS','V_growth_ILE','V_growth_LYS','V_growth_MET','V_growth_PHE','V_growth_PRO','V_growth_SER','V_growth_THR','V_growth_TYR','V_growth_VAL','V_growth_ATP','V_growth_ADP') 
+tV_ <- t( data.frame(V_))
+colnames(tV_)=name_V_
+
+ka<- c(00903776 ,312102 ) 
+name_ka <- c('ka_AMP_ATP','ka_F6P') 
+tka <- t( data.frame(ka))
+colnames(tka)=name_ka
+
+al<- c(04712 ,411128 ) 
+name_al <- c('alpha_AMP_ATP','alpha_F6P') 
+tal <- t( data.frame(al))
+colnames(tal)=name_al
+
+be<- c(104557 ,174503 ) 
+name_be <- c('beta_AMP_ATP','beta_F6P') 
+tbe <- t( data.frame(be))
+colnames(tbe)=name_be
+
+ki<- c(00108971 ,0235669 ,0286624 ,471338 ,35 ,227872 ,170,444) 
+name_ki <- c('ki_G6P','ki_PEP','ki_PYR','ki_CIT','ki_EGLN','ki_ALA','ki_LAC','ki_NH4') 
+tki <- t( data.frame(ki))
+colnames(tki)=name_ki
+
+parameterName=c(name_vm,name_km,name_V_,name_ka,name_al,name_be,name_ki)
+```
+
+### Equation differencial Parameters
+```{r}
+
+#Blood flow rate
+Fin <-94181e-08 #y[47) * mu_blood 
+Fout <-Fin 
+F <-Fout 
+
+parameterName=c(parameterName,Fin,Fout,F)
+```
+
+
+```{r}
+parameterName
+```
+
+
+## Fonctions
+
+### Michaelis Menten definition
+```{r}
+mm <- function(c,k,n){
+  result <- (c^n)/(k^n+c^n)
+  return(result)}
+```
+
+
+### Inhibition
+```{r}
+inhibition <- function(S,ki){
+  return(ki/(ki + S))}
+```
+
+### Activation
+```{r}
+activation <- function(S,A,Ka,alpha,beta){
+  return(S*(1+beta*A/alpha/Ka)/(Km*(1+A/Ka)+S*(1+A/Ka/alpha)))}
+```
+
+## Data time
+```{r}
+temps <- seq(0,20,by=01)
+```
+
+
+
+## Model Definition
+
+### Enzyme flux
+
+```{r}
+orderReact <- c("VHK","VPGI","VPFK","VPGK","VPK","VLDH","VG6PDH","VEP","VTK","VPDH","VCS","VCITS","VACL","VAKGDH","VSDH","VMLD","VPC","VME","VGlnT","VGLDH","VAlaTA","VASN","VASTA","VAAtoSUC","VHISARGTA","VGluT","VSDHH","VATPase","VNADPHox","Vresp","Vleak","VAK","VPPRibP","VPALM","Vgrowth")
+```
+
+```{r}
+flux <- function(t,y,parameters){  
+  #t est le vecteur temps sur lequel on veut simuler le modèle (temps initial, temps final et pas de temps)
+  #y est le vecteur de variables - > y[1]=X et y[2]=Z
+  #parameters est le vecteur de paramètres -> parameters[1]=r, parameters[2]=k, parameters[3]=a, 
+  #parameters[4]=s, parameters[5]=m, parameters[6]=b
+
+  #on définit dy le vecteur d'équations -> dy[1]=dX/dt et dy[2]=dZ/dt
+  
+  vmax_VHK      <- parmeters[1]
+  vmax_VPGI     <- parmeters[2]
+  vmax_VPFK     <- parmeters[3] 
+  vmax_VPGK     <- parmeters[4] 
+  vmax_VPK      <- parmeters[5] 
+  vmax_VLDH     <- parmeters[6] 
+  vmax_VG6PDH   <- parmeters[7] 
+  vmax_VEP      <- parmeters[8] 
+  vmax_VTK      <- parmeters[9] 
+  vmax_VPDH     <- parmeters[10] 
+  vmax_VCS      <- parmeters[11] 
+  vmax_VCITS    <- parmeters[12] 
+  vmax_VAKGDH   <- parmeters[13] 
+  vmax_VSDH     <- parmeters[14] 
+  vmax_VMLD     <- parmeters[15] 
+  vmax_VPC      <- parmeters[16] 
+  vmax_VME      <- parmeters[17] 
+  vmax_VGlnT    <- parmeters[18] 
+  vmax_VGLDH    <- parmeters[19] 
+  vmax_VAlaTA   <- parmeters[20] 
+  vmax_VASN     <- parmeters[21] 
+  vmax_VASTA    <- parmeters[22] 
+  vmax_VAAtoSUC <- parmeters[23] 
+  vmax_VHISARGTA<- parmeters[24] 
+  vmax_VGluT    <- parmeters[25] 
+  vmax_VSDHH    <- parmeters[26] 
+  vmax_VATPase  <- parmeters[27] 
+  vmax_VNADPHox <- parmeters[28] 
+  vmax_Vresp    <- parmeters[29] 
+  vmax_Vleak    <- parmeters[30] 
+  vmax_VAK      <- parmeters[31] 
+  vmax_VPPRibP  <- parmeters[32] 
+  vmax_Vgrowth  <- parmeters[33]
+  vmaxr_VLDH    <- parmeters[34] 
+  vmaxr_VGlnT   <- parmeters[35] 
+  vmaxr_VGLDH   <- parmeters[36] 
+  vmaxr_VAlaTA  <- parmeters[37] 
+  vmaxr_VGluT   <- parmeters[38] 
+  vmaxr_VAK     <- parmeters[39] 
+  vmaxr_VPGI    <- parmeters[40] 
+  vmax_VPALM    <- parmeters[41] 
+  vmax_VACL     <- parmeters[42] 
+  km_EGLC <- parmeters[43] 
+  km_EGLN <- parmeters[44] 
+  km_LAC  <- parmeters[45] 
+  km_NH4  <- parmeters[46] 
+  km_ALA  <- parmeters[47] 
+  km_ARG  <- parmeters[48] 
+  km_ASP  <- parmeters[49] 
+  km_ASN  <- parmeters[50] 
+  km_HIS  <- parmeters[51] 
+  km_ILE  <- parmeters[52] 
+  km_LYS  <- parmeters[53] 
+  km_SER  <- parmeters[54] 
+  km_TYR  <- parmeters[55] 
+  km_GLY  <- parmeters[56] 
+  km_VAL  <- parmeters[57] 
+  km_G6P  <- parmeters[58] 
+  km_F6P  <- parmeters[59] 
+  km_GAP  <- parmeters[60] 
+  km_PEP  <- parmeters[61] 
+  km_R5P  <- parmeters[62] 
+  km_X5P  <- parmeters[63] 
+  km_PYR  <- parmeters[64] 
+  km_ACCOA<- parmeters[65] 
+  km_OXA  <- parmeters[66] 
+  km_CIT  <- parmeters[67] 
+  km_AKG  <- parmeters[68] 
+  km_SUC  <- parmeters[69] 
+  km_MAL  <- parmeters[70] 
+  km_EGLU <- parmeters[71] 
+  km_GLU  <- parmeters[72] 
+  km_CO2  <- parmeters[73] 
+  km_O2   <- parmeters[74] 
+  km_Pi   <- parmeters[75] 
+  km_ATP  <- parmeters[76] 
+  km_ADP  <- parmeters[77] 
+  km_AMP  <- parmeters[78] 
+  km_NADH <- parmeters[79] 
+  km_NADPH <- parmeters[80] 
+  km_ATP_ADP <- parmeters[81] 
+  km_ADP_ATP <- parmeters[82] 
+  km_NADH_NAD <- parmeters[83] 
+  km_NAD_NADH <- parmeters[84] 
+  km_NADP_NADPH <- parmeters[85] 
+  km_NADPH_NADP <- parmeters[86] 
+  km_ASPg <- parmeters[87] 
+  km_ASNg <- parmeters[88] 
+  km_HISg <- parmeters[89] 
+  km_ARGg <- parmeters[91] 
+  km_LYSg <- parmeters[92] 
+  km_ILEg <- parmeters[93] 
+  km_VALg <- parmeters[94] 
+  km_TYRg <- parmeters[95] 
+  km_METg <- parmeters[96] 
+  km_SERg <- parmeters[97] 
+  km_THRg <- parmeters[98] 
+  km_PROg <- parmeters[99] 
+  km_PHEg <- parmeters[100] 
+  km_GLYg <- parmeters[101] 
+  km_R5Pg <- parmeters[102] 
+  km_G6Pg <- parmeters[103] 
+  km_ATPg <- parmeters[104] 
+  km_ALAg <- parmeters[105] 
+  km_EGLNg <- parmeters[106] 
+  km_EGLUg <- parmeters[107] 
+  km_PALMg <- parmeters[108] 
+  V_growth_R5P  <- parmeters[109] 
+  V_growth_G6P  <- parmeters[110] 
+  V_growth_PALM <- parmeters[111] 
+  V_growth_EGLU <- parmeters[112] 
+  V_growth_EGLN <- parmeters[113] 
+  V_growth_ALA <- parmeters[114] 
+  V_growth_ARG <- parmeters[115] 
+  V_growth_ASN <- parmeters[116] 
+  V_growth_ASP <- parmeters[117] 
+  V_growth_GLY <- parmeters[118] 
+  V_growth_HIS <- parmeters[119] 
+  V_growth_ILE <- parmeters[120] 
+  V_growth_LYS <- parmeters[121] 
+  V_growth_MET <- parmeters[122] 
+  V_growth_PHE <- parmeters[123] 
+  V_growth_PRO <- parmeters[124] 
+  V_growth_SER <- parmeters[125] 
+  V_growth_THR <- parmeters[126] 
+  V_growth_TYR <- parmeters[127] 
+  V_growth_VAL <- parmeters[128] 
+  V_growth_ATP <- parmeters[129] 
+  V_growth_ADP <- parmeters[130]
+  
+  ka_AMP_ATP  <- parmeters[131] 
+  ka_F6P      <- parmeters[132]
+  alpha_AMP_ATP <- parmeters[133] 
+  alpha_F6P     <- parmeters[134] 
+  beta_F6P      <- parmeters[135] 
+  beta_AMP_ATP  <- parmeters[136] 
+  ki_G6P  <- parmeters[137] 
+  ki_PEP  <- parmeters[138] 
+  ki_PYR  <- parmeters[139] 
+  ki_CIT  <- parmeters[140] 
+  ki_EGLN <- parmeters[141] 
+  ki_ALA <- parmeters[142] 
+  ki_LAC <- parmeters[143] 
+  ki_NH4 <- parmeters[144] 
+  
+
+
+  de <-numeric(37)
+  
+  de <- c(vmax_VHK* mm(y[5]/y[2], km_ATP_ADP,1)* activation(y[30],y[4]/y[5], km_EGLC, ka_AMP_ATP, alpha_AMP_ATP, beta_AMP_ATP)* inhibition(y[9], ki_G6P), 
+  vmax_VPGI* mm(y[9], km_G6P,1)* inhibition(y[20], ki_PEP) - vmaxr_VPGI* mm(y[8], km_F6P,1), 
+  vmax_VPFK* mm(y[5]/y[2], km_ATP_ADP,1)* activation(y[8],y[4]/y[5], km_F6P, ka_AMP_ATP, alpha_AMP_ATP, beta_AMP_ATP)* inhibition(y[6], ki_CIT)* inhibition(y[36], ki_LAC), 
+  vmax_VPGK* mm(y[2]/y[5], km_ADP_ATP,1)* mm(y[10], km_GAP,1)* mm(y[13]/y[14], km_NAD_NADH,1), 
+  vmax_VPK* mm(y[2]/y[5], km_ADP_ATP,1)* activation(y[20],y[8], km_PEP, ka_F6P, alpha_F6P, beta_F6P)* inhibition(y[26], ki_ALA), 
+  vmax_VLDH* mm(y[14]/y[13], km_NADH_NAD,1)* activation(y[21],y[4]/y[5], km_PYR, ka_AMP_ATP, alpha_AMP_ATP, beta_AMP_ATP) - vmaxr_VLDH* mm(y[13]/y[14], km_NAD_NADH,1)* mm(y[36], km_LAC,1)* inhibition(y[21], ki_PYR), 
+  vmax_VG6PDH* mm(y[9], km_G6P,1)* mm(y[15]/y[16], km_NADP_NADPH,1), 
+  vmax_VEP* mm(y[23], km_R5P,1), 
+  vmax_VTK* mm(y[23], km_R5P,1)* mm(y[25], km_X5P,1), 
+  vmax_VPDH* mm(y[13]/y[14], km_NAD_NADH,1)* mm(y[21], km_PYR,1), 
+  vmax_VCS* mm(y[1], km_ACCOA,1)* mm(y[18], km_OXA,1), 
+  vmax_VCITS* mm(y[6], km_CIT,1)* mm(y[13]/y[14], km_NAD_NADH,1), 
+  vmax_VACL* mm(y[5]/y[2], km_ATP_ADP,1)* mm(y[6], km_CIT,1), 
+  vmax_VAKGDH* mm(y[2]/y[5], km_ADP_ATP,1)* mm(y[3], km_AKG,1)* mm(y[13]/y[14], km_NAD_NADH,1)* mm(y[22], km_Pi,1), 
+  vmax_VSDH* mm(y[13]/y[14], km_NAD_NADH,1)* mm(y[24], km_SUC,1), 
+  vmax_VMLD* mm(y[12], km_MAL,1)* mm(y[13]/y[14], km_NAD_NADH,1), 
+  vmax_VPC* mm(y[5]/y[2], km_ATP_ADP,1)* mm(y[7], km_CO2,1)* mm(y[21], km_PYR,1), 
+  vmax_VME* mm(y[12], km_MAL,1)* mm(y[15]/y[16], km_NADP_NADPH,1), 
+  vmax_VGlnT* mm(y[2]/y[5], km_ADP_ATP,1)* mm(y[22], km_Pi,1)* mm(y[31], km_EGLN,1) - vmaxr_VGlnT* mm(y[5]/y[2], km_ATP_ADP,1)* mm(y[11], km_GLU,1)* mm(y[39], km_NH4,1), 
+  vmax_VGLDH* mm(y[11], km_GLU,1)* mm(y[13]/y[14], km_NAD_NADH,1) - vmaxr_VGLDH* mm(y[3], km_AKG,1)* mm(y[14]/y[13], km_NADH_NAD,1)* mm(y[39], km_NH4,1), 
+  vmax_VAlaTA* mm(y[11], km_GLU,1)* mm(y[21], km_PYR,1) - vmaxr_VAlaTA* mm(y[3], km_AKG,1)* mm(y[26], km_ALA,1)* inhibition(y[31], ki_EGLN), 
+  vmax_VASN* mm(y[28], km_ASN,1), 
+  vmax_VASTA* mm(y[3], km_AKG,1)* mm(y[29], km_ASP,1), 
+  vmax_VAAtoSUC* mm(y[3], km_AKG,1)* mm(y[5]/y[2], km_ATP_ADP,1)* mm(y[13]/y[14], km_NAD_NADH,1)* mm(y[15]/y[16], km_NADP_NADPH,1)* mm(y[35], km_ILE,1)* mm(y[37], km_LYS,1)* mm(y[44], km_TYR,1)* mm(y[45], km_VAL,1), 
+  vmax_VHISARGTA* mm(y[3], km_AKG,1)* mm(y[27], km_ARG,1)* mm(y[34], km_HIS,1), 
+  vmax_VGluT* mm(y[11], km_GLU,1) - vmaxr_VGluT* mm(y[32], km_EGLU,1), 
+  vmax_VSDHH* mm(y[42], km_SER,1), 
+  vmax_VATPase* mm(y[5], km_ATP,1), 
+  vmax_VNADPHox* mm(y[16], km_NADPH,1), 
+  vmax_Vresp* mm(y[2]/y[5], km_ADP_ATP,1)* mm(y[14]/y[13], km_NADH_NAD,1)* mm(y[17], km_O2,1)* mm(y[22], km_Pi,1), 
+  vmax_Vleak* mm(y[14], km_NADH,1), 
+  vmax_VAK* mm(y[4], km_AMP,1)* mm(y[5], km_ATP,1) - vmaxr_VAK* mm(y[2], km_ADP,1), 
+  vmax_VPPRibP* mm(y[5], km_ATP,1)* mm(y[23], km_R5P,1)* mm(y[29], km_ASP,1)* mm(y[31], km_EGLN,1)* mm(y[33], km_GLY,1), 
+  vmax_VPALM* mm(y[1], km_ACCOA,1)* mm(y[5]/y[2], km_ATP_ADP,1)* mm(y[16]/y[15], km_NADPH_NADP,1), 
+  vmax_Vgrowth* mm(y[5], km_ATPg,1)* mm(y[9], km_G6Pg,1)* mm(y[19], km_PALMg,1)* mm(y[23], km_R5Pg,1)* mm(y[26], km_ALAg,1)* mm(y[27], km_ARGg,1)* mm(y[28], km_ASNg,1)* mm(y[29], km_ASPg,1)* mm(y[31], km_EGLNg,1)* mm(y[32], km_EGLUg,1)* mm(y[33], km_GLYg,1)* mm(y[34], km_HISg,1)* mm(y[35], km_ILEg,1)* mm(y[37], km_LYSg,1)* mm(y[38], km_METg,1)* mm(y[40], km_PHEg,1)* mm(y[41], km_PROg,1)* mm(y[42], km_SERg,1)* mm(y[43], km_THRg,1)* mm(y[44], km_TYRg,1)* mm(y[45], km_VALg,1)* inhibition(y[36], ki_LAC)* inhibition(y[39], ki_NH4))
+
+  return(list(de))
+  }
+```
+
+
+### Equation differencial 
+
+
+
+```{r}
+syst <- function(t,y,parameters){
+  
+  parameterFlux <- flux(t,y,parameters)
+  VHK          <- parameterFlux[1]
+  VPGI         <- parameterFlux[2]        
+  VPFK         <- parameterFlux[3]        
+  VPGK         <- parameterFlux[4]       
+  VPK          <- parameterFlux[5]
+  VLDH         <- parameterFlux[6]       
+  VG6PDH       <- parameterFlux[7]
+  VEP          <- parameterFlux[8]
+  VTK          <- parameterFlux[9]
+  VPDH         <- parameterFlux[10]         
+  VCS          <- parameterFlux[11]
+  VCITS        <- parameterFlux[12]
+  VACL         <- parameterFlux[13]
+  VAKGDH       <- parameterFlux[14]
+  VSDH         <- parameterFlux[15]
+  VMLD         <- parameterFlux[16]
+  VPC          <- parameterFlux[17]
+  VME          <- parameterFlux[18]
+  VGlnT        <- parameterFlux[19]
+  VGLDH        <- parameterFlux[20]
+  VAlaTA       <- parameterFlux[21]
+  VASN         <- parameterFlux[22]
+  VASTA        <- parameterFlux[23]
+  VAAtoSUC     <- parameterFlux[24]
+  VHISARGTA    <- parameterFlux[25]
+  VGluT        <- parameterFlux[26]
+  VSDHH        <- parameterFlux[27]
+  VATPase      <- parameterFlux[28]
+  VNADPHox     <- parameterFlux[29]
+  Vresp        <- parameterFlux[30]
+  Vleak        <- parameterFlux[31]
+  VAK          <- parameterFlux[32]
+  VPPRibP      <- parameterFlux[33]
+  VPALM        <- parameterFlux[34]
+  Vgrowth      <- parameterFlux[35]
+ 
+  V_growth_R5P  <- parmeters[109] 
+  V_growth_G6P  <- parmeters[110] 
+  V_growth_PALM <- parmeters[111] 
+  V_growth_EGLU <- parmeters[112] 
+  V_growth_EGLN <- parmeters[113] 
+  V_growth_ALA <- parmeters[114] 
+  V_growth_ARG <- parmeters[115] 
+  V_growth_ASN <- parmeters[116] 
+  V_growth_ASP <- parmeters[117] 
+  V_growth_GLY <- parmeters[118] 
+  V_growth_HIS <- parmeters[119] 
+  V_growth_ILE <- parmeters[120] 
+  V_growth_LYS <- parmeters[121] 
+  V_growth_MET <- parmeters[122] 
+  V_growth_PHE <- parmeters[123] 
+  V_growth_PRO <- parmeters[124] 
+  V_growth_SER <- parmeters[125] 
+  V_growth_THR <- parmeters[126] 
+  V_growth_TYR <- parmeters[127] 
+  V_growth_VAL <- parmeters[128] 
+  V_growth_ATP <- parmeters[129] 
+  V_growth_ADP <- parmeters[130]
+  Fin <- parmeters[145] 
+  Fout<- parmeters[146] 
+  F   <- parmeters[147] 
+  
+  
+  #Specific growth rates
+  mu_cells <-Vgrowth - Vgrowth *12* (1 - (y[13]/y[14])^18 / (002^18  + (y[13]/y[14])^18))
+  mu_blood <-(1 - y[46]/ y[48]) * mu_cells
+
+  
+  dy <-numeric(37)
+  dy <- c(
+   + VPDH - VCS + VACL +(8 * VAAtoSUC) -(8 * VPALM) - (mu_cells * y[1]) , # ACCOA
+   + VHK + VPFK - VPGK - VPK + VACL - VAKGDH + VPC - VGlnT + VAAtoSUC + VATPase -(42 * Vresp) +(2 * VAK) +(2 * VPPRibP) +(7 * VPALM) - (mu_cells * y[2]) + (V_growth_ADP * mu_cells) , # ADP
+   + VCITS - VAKGDH + VGLDH + VAlaTA - VASTA -(7 * VAAtoSUC) - VHISARGTA - (mu_cells * y[3]) , # AKG
+   - VAK + VPPRibP - (mu_cells * y[4]) , # AMP
+   - VHK - VPFK + VPGK + VPK - VACL + VAKGDH - VPC + VGlnT - VAAtoSUC - VATPase +(42 * Vresp) - VAK -(2 * VPPRibP) -(7 * VPALM) - (mu_cells * y[5]) - (V_growth_ATP * mu_cells) , # ATP
+   + VCS - VCITS - VACL - (mu_cells * y[6]) , # CIT
+   + VG6PDH + VPDH + VCITS + VAKGDH - VPC + VAAtoSUC + VHISARGTA - (mu_cells * y[7]) , # CO2
+   + VPGI - VPFK +(2 * VTK) - (mu_cells * y[8]) , # F6P
+   + VHK - VPGI - VG6PDH - (mu_cells * y[9]) - (V_growth_G6P * mu_cells) , # G6P
+   +(2 * VPFK) - VPGK + VTK - (mu_cells * y[10]) , # GAP
+   + VGlnT - VGLDH - VAlaTA + VASTA +(4 * VAAtoSUC) +(4 * VHISARGTA) - VGluT +(2 * VPPRibP) - (mu_cells * y[11]) , # GLU
+   + VSDH - VMLD - VME + VAAtoSUC +(2 * VPPRibP) - (mu_cells * y[12]) , # MAL
+   - VPGK + VLDH - VPDH - VCITS - VAKGDH -(066 * VSDH) - VMLD - VGLDH -(9 * VAAtoSUC) +(2 * Vresp) +(2 * Vleak) - (mu_cells * y[13]) , # NAD
+   + VPGK - VLDH + VPDH + VCITS + VAKGDH +(066 * VSDH) + VMLD + VGLDH +(9 * VAAtoSUC) -(2 * Vresp) -(2 * Vleak) - (mu_cells * y[14]) , # NADH
+   -(2 * VG6PDH) - VME -(2 * VAAtoSUC) + VNADPHox +(14 * VPALM) - (mu_cells * y[15]) , # NADP
+   +(2 * VG6PDH) + VME +(2 * VAAtoSUC) - VNADPHox -(14 * VPALM) - (mu_cells * y[16]) , # NADPH
+   - Vresp - (mu_cells * y[17]) , # O2
+   - VCS + VACL + VMLD + VPC + VASTA - (mu_cells * y[18]) , # OXA
+   + VPALM - (mu_cells * y[19]) - (V_growth_PALM * mu_cells) , # PALM
+   + VPGK - VPK - (mu_cells * y[20]) , # PEP
+   + VPK - VLDH - VPDH - VPC + VME - VAlaTA + VSDHH - (mu_cells * y[21]) , # PYR
+   - VAKGDH + VPC - VGlnT + VATPase -(42 * Vresp) - (mu_cells * y[22]) , # Pi
+   + VG6PDH - VEP - VTK -(06 * VPPRibP) - (mu_cells * y[23]) - (V_growth_R5P * mu_cells) , # R5P
+   + VAKGDH - VSDH +(3 * VAAtoSUC) - (mu_cells * y[24]) , # SUC
+   + VEP -(2 * VTK) - (mu_cells * y[25]) , # X5P
+   (+ F * x0[26] - F * y[26])/y[47] + (VAlaTA - V_growth_ALA * mu_cells) * y[46]/y[47] - mu_blood * y[26], # ALA
+   (+ F * x0[27] - F * y[27])/y[47] + (- VHISARGTA - V_growth_ARG * mu_cells) * y[46]/y[47] - mu_blood * y[27], # ARG
+   (+ F * x0[28] - F * y[28])/y[47] + (- VASN - V_growth_ASN * mu_cells) * y[46]/y[47] - mu_blood * y[28], # ASN
+   (+ F * x0[29] - F * y[29])/y[47] + (VASN - VASTA -(2 * VPPRibP) - V_growth_ASP * mu_cells) * y[46]/y[47] - mu_blood * y[29], # ASP
+   (+ F * x0[30] - F * y[30])/y[47] - VHK * y[46]/y[47]  - mu_blood * y[30], # EGLC
+   (+ F * x0[31] - F * y[31])/y[47] + (- VGlnT - 2 * VPPRibP - V_growth_EGLN * mu_cells) * y[46]/y[47] - mu_blood * y[31], # EGLN
+   (+ F * x0[32] - F * y[32])/y[47] + (VGluT - V_growth_EGLU * mu_cells )* y[46]/y[47] - mu_blood * y[32], # EGLU
+   (+ F * x0[33] - F * y[33])/y[47] + (- VPPRibP - V_growth_GLY * mu_cells) * y[46]/y[47] - mu_blood * y[33], # GLY
+   (+ F * x0[34] - F * y[34])/y[47] + (- VHISARGTA - V_growth_HIS * mu_cells) * y[46]/y[47] - mu_blood * y[34], # HIS
+   (+ F * x0[35] - F * y[35])/y[47] + (- VAAtoSUC - V_growth_ILE * mu_cells) * y[46]/y[47] - mu_blood * y[35], # ILE
+   (+ F * x0[36] - F * y[36])/y[47] + VLDH * y[46]/y[47] - mu_blood * y[36], # LAC
+   (+ F * x0[37] - F * y[37])/y[47] + (- VAAtoSUC - V_growth_LYS * mu_cells) * y[46]/y[47] - mu_blood * y[37], # LYS
+   (+ F * x0[38] - F * y[38])/y[47] + (- V_growth_MET * mu_cells) * y[46]/y[47] - mu_blood * y[38], # MET
+   (+ F * x0[39] - F * y[39])/y[47] + (VGlnT + VGLDH + VASN + VHISARGTA + VSDHH)* y[46]/y[47]  - mu_blood * y[39], # NH4
+   (+ F * x0[40] - F * y[40])/y[47] + (- V_growth_PHE * mu_cells) * y[46]/y[47] - mu_blood * y[40], # PHE
+   (+ F * x0[41] - F * y[41])/y[47] + (- V_growth_PRO * mu_cells) * y[46]/y[47] - mu_blood * y[41], # PRO
+   (+ F * x0[42] - F * y[42])/y[47] + (- VSDHH - V_growth_SER * mu_cells) * y[46]/y[47] - mu_blood * y[42], # SER
+   (+ F * x0[43] - F * y[43])/y[47] + (- V_growth_THR * mu_cells) * y[46]/y[47] - mu_blood * y[43], # THR
+   (+ F * x0[44] - F * y[44])/y[47] + (- VAAtoSUC - V_growth_TYR * mu_cells) * y[46]/y[47] - mu_blood * y[44], # TYR
+   (+ F * x0[45] - F * y[45])/y[47] + (- VAAtoSUC - V_growth_VAL * mu_cells) * y[46]/y[47] - mu_blood * y[45], # VAL
+   (+ mu_cells * y[46]), # X
+   (+ mu_blood * y[47])) # Vblood
+   dy <- c(dy,dy[46] + dy[47]) # VT
+  return(list(df))}
+```
+
+
+######################################################################################################################################
+
+# BROUILLON
+```{r}
+flux <- function(t,y,parameters){  
+  #t est le vecteur temps sur lequel on veut simuler le modèle (temps initial, temps final et pas de temps)
+  #y est le vecteur de variables - > y[1]=X et y[2]=Z
+  #parameters est le vecteur de paramètres -> parameters[1]=r, parameters[2]=k, parameters[3]=a, 
+  #parameters[4]=s, parameters[5]=m, parameters[6]=b
+
+  #on définit dy le vecteur déquations -> dy[1]=dX/dt et dy[2]=dZ/dt
+
+  de <-numeric(37)
+  
+  de <- c(
+  parameter[1]* mm(y[5]/y[2], parameter[81],1)* activation(y[30],y[4]/y[5], parameter[43], parameter[107], parameter[109], parameter[111])* inhibition(y[9], parameter[113]), 
+  parameter[2]* mm(y[9], parameter[58],1)* inhibition(y[20], parameter[114]) - parameter[40]* mm(y[8], parameter[59],1), 
+  parameter[3]* mm(y[5]/y[2], parameter[81],1)* activation(y[8],y[4]/y[5], parameter[59], parameter[107], parameter[109], parameter[111])* inhibition(y[6], parameter[116])* inhibition(y[36], parameter[119]), 
+  parameter[4]* mm(y[2]/y[5], parameter[81],1)* mm(y[10], parameter[60],1)* mm(y[13]/y[14], parameter[83],1), 
+  parameter[5]* mm(y[2]/y[5], parameter[81],1)* activation(y[20],y[8], parameter[61], parameter[108], parameter[110], parameter[112])* inhibition(y[26], parameter[118]), 
+  parameter[6]* mm(y[14]/y[13], parameter[82],1)* activation(y[21],y[4]/y[5], parameter[64], parameter[107], parameter[109], parameter[111]) - parameter[34]* mm(y[13]/y[14], parameter[83],1)* mm(y[36], parameter[45],1)* inhibition(y[21], parameter[115]), 
+  parameter[7]* mm(y[9], parameter[58],1)* mm(y[15]/y[16], parameter[84],1), 
+  parameter[8]* mm(y[23], parameter[62],1), 
+  parameter[9]* mm(y[23], parameter[62],1)* mm(y[25], parameter[63],1), 
+  parameter[10]* mm(y[13]/y[14], parameter[83],1)* mm(y[21], parameter[64],1), 
+  parameter[11]* mm(y[1], parameter[65],1)* mm(y[18], parameter[66],1), 
+  parameter[12]* mm(y[6], parameter[67],1)* mm(y[13]/y[14], parameter[83],1), 
+  parameter[42]* mm(y[5]/y[2], parameter[81],1)* mm(y[6], parameter[67],1), 
+  parameter[13]* mm(y[2]/y[5], parameter[81],1)* mm(y[3], parameter[68],1)* mm(y[13]/y[14], parameter[83],1)* mm(y[22], parameter[75],1), 
+  parameter[14]* mm(y[13]/y[14], parameter[83],1)* mm(y[24], parameter[69],1), 
+  parameter[15]* mm(y[12], parameter[70],1)* mm(y[13]/y[14], parameter[83],1), 
+  parameter[16]* mm(y[5]/y[2], parameter[81],1)* mm(y[7], parameter[73],1)* mm(y[21], parameter[64],1), 
+  parameter[17]* mm(y[12], parameter[70],1)* mm(y[15]/y[16], parameter[84],1), 
+  parameter[18]* mm(y[2]/y[5], parameter[81],1)* mm(y[22], parameter[75],1)* mm(y[31], parameter[44],1) - parameter[35]* mm(y[5]/y[2], parameter[81],1)* mm(y[11], parameter[72],1)* mm(y[39], parameter[46],1), 
+  parameter[19]* mm(y[11], parameter[72],1)* mm(y[13]/y[14], parameter[83],1) - parameter[36]* mm(y[3], parameter[68],1)* mm(y[14]/y[13], parameter[82],1)* mm(y[39], parameter[46],1), 
+  parameter[20]* mm(y[11], parameter[72],1)* mm(y[21], parameter[64],1) - parameter[37]* mm(y[3], parameter[68],1)* mm(y[26], parameter[47],1)* inhibition(y[31], parameter[117]), 
+  parameter[21]* mm(y[28], parameter[50],1), 
+  parameter[22]* mm(y[3], parameter[68],1)* mm(y[29], parameter[49],1), 
+  parameter[23]* mm(y[3], parameter[68],1)* mm(y[5]/y[2], parameter[81],1)* mm(y[13]/y[14], parameter[83],1)* mm(y[15]/y[16], parameter[84],1)* mm(y[35], parameter[52],1)* mm(y[37], parameter[53],1)* mm(y[44], parameter[55],1)* mm(y[45], parameter[57],1), 
+  parameter[24]* mm(y[3], parameter[68],1)* mm(y[27], parameter[48],1)* mm(y[34], parameter[51],1), 
+  parameter[25]* mm(y[11], parameter[72],1) - parameter[38]* mm(y[32], parameter[71],1), 
+  parameter[26]* mm(y[42], parameter[54],1), 
+  parameter[27]* mm(y[5], parameter[76],1), 
+  parameter[28]* mm(y[16], parameter[80],1), 
+  parameter[29]* mm(y[2]/y[5], parameter[81],1)* mm(y[14]/y[13], parameter[82],1)* mm(y[17], parameter[74],1)* mm(y[22], parameter[75],1), 
+  parameter[30]* mm(y[14], parameter[79],1), 
+  parameter[31]* mm(y[4], parameter[78],1)* mm(y[5], parameter[76],1) - parameter[39]* mm(y[2], parameter[77],1), 
+  parameter[32]* mm(y[5], parameter[76],1)* mm(y[23], parameter[62],1)* mm(y[29], parameter[49],1)* mm(y[31], parameter[44],1)* mm(y[33], parameter[56],1), 
+  parameter[41]* mm(y[1], parameter[65],1)* mm(y[5]/y[2], parameter[81],1)* mm(y[16]/y[15], parameter[85],1), 
+  parameter[33]* mm(y[5], parameter[102],1)* mm(y[9], parameter[101],1)*mm(y[19], parameter[106],1)* mm(y[23], parameter[100],1)* mm(y[26], parameter[103],1)* mm(y[27], parameter[89],1)* mm(y[28], parameter[87],1)* mm(y[29], parameter[86],1)* mm(y[31], parameter[104],1)* mm(y[32], parameter[105],1)* mm(y[33], parameter[99],1)* mm(y[34], parameter[88],1)* mm(y[35], parameter[91],1)* mm(y[37], parameter[90],1)* mm(y[38], parameter[94],1)* mm(y[40], parameter[98],1)* mm(y[41], parameter[97],1)* mm(y[42], parameter[95],1)* mm(y[43], parameter[96],1)* mm(y[44], parameter[93],1)* mm(y[45], parameter[92],1)* inhibition(y[36], parameter[119])* inhibition(y[39], parameter[120]), 
+  )
+  return(list(de))
+}
+```
+```{r}
+modelKMK <- function(time,y,parameters)[
+dy1 <- - parameters[1]*y[1]*y[2]
+dy2 <- parameters[1]*y[1]*y[2] - parameters[2]*y[2]
+dy3 <- parameters[2]*y[2]
+list(c(dy1,dy2,dy3))
+]
+```
+
+
+
+
