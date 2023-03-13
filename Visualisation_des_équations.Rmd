@@ -1,0 +1,119 @@
+---
+title: "Visualisation_des_équations"
+author: "CRISCI Emma"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Equation de Hill
+
+```{r}
+interval = seq(0, 5, by= 0.1) # interval graphique des x
+head(interval)
+```
+
+## équation de hill
+```{r}
+hill <- function (Cs, Km, Vmax,n){
+  return( Vmax*(Cs^n/( (Cs^n) + (Km^n))) )
+}
+```
+
+
+## Cas simple
+```{r}
+y    = c()
+Km   = 0.5
+Vmax = 1
+n    = 1
+for (i in seq (1,length(interval))){
+  y  = c(y ,hill(interval[i], Km, Vmax, n))
+}
+```
+
+```{r}
+plot(x = interval, y = y, main = "Exemple de visualisation de l'équation de Hill (n=1)", xlab= "Concentration du ligand L", ylab= "Vitesse de Réaction", las=1, type="l")
+```
+
+## Variation du paramètre de hill
+```{r}
+paraHill = seq(1,5)
+yPara    = list()
+
+# Calcul du y 
+for (para in seq(1,length(paraHill))){
+  yParahill    = c()
+  for (i in seq (1,length(interval))){
+    yParahill  = c(yParahill ,hill(interval[i], Km, Vmax, para))
+  }
+  yPara[[para]]= yParahill
+}
+```
+
+```{r}
+col = rainbow(5)
+plot(x = interval, y = yPara[[1]], main = "Exemple de visualisation de l'équation de Hill, Variation du paramètre de Hill", xlab= "Concentration du ligand L", ylab= "Vitesse de Réaction", las=1, ylim=c(0,Vmax), col=col[1],type="l")
+for (i in seq (2,length(paraHill))){
+  lines(interval,yPara[[i]], col=col[i])
+}
+legend("topleft",legend=c("1","2","3","4","5"),lty=c(2,1), col=col )
+
+```
+
+## Variation de km 
+
+```{r}
+paraKm = seq(1,5)
+yPara    = list()
+n=2
+
+# Calcul du y 
+for (para in seq(1,length(paraKm))){
+  yParaF    = c()
+  for (i in seq (1,length(interval))){
+    yParaF  = c(yParaF ,hill(interval[i], para, Vmax, n))
+  }
+  yPara[[para]]= yParaF
+}
+```
+
+```{r}
+col = rainbow(5)
+plot(x = interval, y = yPara[[1]], main = "Exemple de visualisation de l'équation de Hill, Variation du Km", xlab= "Concentration du ligand L", ylab= "Vitesse de Réaction", las=1, ylim=c(0,Vmax), col=col[1],type="l")
+for (i in seq (2,length(paraKm))){
+  lines(interval,yPara[[i]], col=col[i])
+}
+legend("topleft",legend=c("1","2","3","4","5"),lty=c(2,1), col=col )
+
+```
+
+##
+
+```{r}
+paraVmax = seq(0,1, by=0.2)
+yPara    = list()
+n=2
+
+# Calcul du y 
+for (para in seq(1,length(paraVmax))){
+  yParaF    = c()
+  for (i in seq (1,length(interval))){
+    yParaF  = c(yParaF ,hill(interval[i], Km, paraVmax[[para]], n))
+  }
+  yPara[[para]]= yParaF
+}
+```
+
+```{r}
+col = rainbow(5)
+plot(x = interval, y = yPara[[1]], main = "Exemple de visualisation de l'équation de Hill, Variation du Vmax", xlab= "Concentration du ligand L", ylab= "Vitesse de Réaction", las=1, ylim=c(0,1), col=col[1],type="l")
+for (i in seq (2,length(paraKm))){
+  lines(interval,yPara[[i]], col=col[i])
+}
+legend("topright",legend=c("1","2","3","4","5"),lty=c(0,5), col=col )
+
+```

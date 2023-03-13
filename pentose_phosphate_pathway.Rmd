@@ -1,0 +1,43 @@
+---
+title: "Pentose_phosphate_pathway"
+author: "CRISCI Emma"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction 
+
+The systeme use is the systeme of the Pentose phosphate Pathway extract from the article Quantitative modeling of pentose phosphate
+pathway response to oxidative stress reveals
+a cooperative regulatory strategy from HURBAIN, Thammen and all
+
+## Objectifs of the study
+
+1. Modelisation of the Pentose Phosphate Pathway like in the reference article
+
+#  Modelisation of the Pentose Phosphate Pathway like in the reference article
+
+## Load of the external data about the reference system
+
+
+```{r}
+parameters <- read.table("parameter.txt", sep = " ", quote = "", header = FALSE, comment.char = ";")
+colnames(parameters)<- c("parName","parValue","parUnit")
+head(parameters)
+```
+
+
+```{r}
+diffEquations <- read.table("differential_equations.txt", sep = " ", quote = "", header = FALSE,na.strings = "NA", fill = TRUE, comment.char = ";")
+colnames(diffEquations)[1:2] <- c("diffEquaName", "equal")
+head(diffEquations)
+```
+
+```{r}
+
+```
+

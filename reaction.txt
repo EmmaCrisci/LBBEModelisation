@@ -1,0 +1,5 @@
+# All function use in the model 
+
+MM0 <- function (S,P,ki,Kmi) {
+	return( (ki*(s for(s in S))/ ( (1 + S[i] / Km[i] ) for(i in seq(1, lenght(Kmi)))))
+	}
