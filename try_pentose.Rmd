@@ -9,22 +9,187 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# Fonctions utilisées
+```{r}
+# S. Charles (2022-03-10)
+rm(list = ls())
+library(tidyverse)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+                ## GENERAL FONCTION ##
+# DIFFUSION LAW
+# Function Diffusion to the compartment 1 to compartment 2
+DIFF <- function(C1, C2, k, kdiff){
+  # C1: matrix(time)
+  # C2: matrix(time)
+  # k: constant max
+  # kdiff: constant diffusion
+  phi <- k + kdiff * (C1-C2)
+  return (phi)
+}
 
-```{r cars}
-summary(cars)
+# MASS ACTION LAW
+# Function MA(m,n) (equation 5) Mass Action
+MA <- function(S, k, P=0, I=0,  Keq=1, Ki=1){
+  # time: vector of time points
+  # S: matrix(time)
+  # P: vector of n products
+  # I: vector of inhibitor
+  # k: constant max
+  # Kms: vector of MM constants for substrates
+  # Kmp: vector of MM constants for products
+  # Keq: equilibrium constant
+  # Ki: Inhibitor constant
+  Un <- rep(1, length(I))
+  phi <- k * (prod(S) - (prod(P)/Keq)) / ( un + I/Ki )
+}
+# /!\ value put by default for P, I, Keq, Ki, in case of the equation is not reversible and has no inhibitors
+
+# MICHAELIS MENTEN LAW
+MM <- function(S, k, Km, P=0, Keq=1, I=0, Ki=1){
+  #time: vector of time points
+  # S: matrix(time)
+  # P: vector of n products
+  # I : vector of inhibitors
+  # k: constant max
+  # Kms: vector of MM constants for substrates
+  # Kmp: vector of MM constants for products
+  # Keq: equilibrium constant
+  # Ki: inhibitor constant
+  Un <- rep(1, length(S))
+  phi <- k * (prod(S) - prod(P)/Keq) / (Un + (prod(S)+prod(P))/Km + sum(I)/Ki)
+  return(phi)
+}
+
+# # Function MM(m,0) (equation 5) IRREVERSIBLE MICHAELIS MENTEN
+# MM_ir <- function(S,  k, Kms){
+#   #time: vector of time points
+#   # S: matrix(time)
+#   # P: vector of n products
+#   # k: constant max
+#   # Kms: vector of MM constants for substrates
+#   # Kmp: vector of MM constants for products
+#   # Keq: equilibrium constant
+#   Un <- rep(1, length(S))
+#   phi <- k * prod(S) / prod(Un + S/Kms)
+#   return(phi)
+# }
+# # Function MM(m,n) (equation 6) REVERSIBLE MICHAELIS MENTEN
+# MM_r <- function(S, P, k, Km, Keq){
+#   #time: vector of time points
+#   # S: matrix(time)
+#   # P: vector of n products
+#   # k: constant max
+#   # Kms: vector of MM constants for substrates
+#   # Kmp: vector of MM constants for products
+#   # Keq: equilibrium constant
+#   Un <- rep(1, length(S))
+#   phi <- k * (prod(S) - prod(P)/Keq) / (Un + (prod(S)+prod(P))/Km)
+#   return(phi)
+# }
+
+
+                ## PARTICULAR FONCTION ##
+## GPx
+
+# MICHAELIS MENTEN LAW
+MM_GPx <- function(S, k, Km){
+  #time: vector of time points
+  # S: matrix(time)
+  # k: constant max
+  # Kms: vector of MM constants for substrates
+  phi <- k * (prod(S) - prod(P)/Keq) / (sum(S/Km)) # need to have the S in the same order than Km
+  return(phi)
+}
+
+## GR
+
+# MICHAELIS MENTEN LAW
+MM_GR <- function(S, k, Km){
+  #time: vector of time points
+  # S: matrix(time)
+  # k: constant max
+  # Kms: vector of MM constants for substrates
+  Un <- rep(1, length(S))
+  phi <- k * (prod(S) - prod(P)/Keq) / (un + sum(S/Km)) # need to have the S in the same order than Km
+  return(phi)
+}
+
+
+
+######
+# # Function MM(m,n) (equation 6) REVERSIBLE MICHAELIS MENTEN
+# MM_r <- function(S, P, k, Km, Keq){
+#   #time: vector of time points
+#   # S: matrix(time)
+#   # P: vector of n products
+#   # k: constant max
+#   # Kms: vector of MM constants for substrates
+#   # Kmp: vector of MM constants for products
+#   # Keq: equilibrium constant
+#   Un <- rep(1, length(S))
+#   phi <- k * (prod(S) - prod(P)/Keq) / prod(Un + S/Km + P/Km)
+#   return(phi)
+# }
+# Function MA(m,n) (equation 4)
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+# Réactions
+```{r}
+# Example for phi_OX: T
+# substrate: S = [H2O2]ext
+k       <- 82.1486
+kdiff   <- 0.2016
+H202ext <- 500 # Only this metabolite consentration is a constant
+S       <- 5 # arbitrary value chosen to try the MMs function
+phi_OX <- DIFF(H202ext, S, k, kdiff)
+
+# Example for phi_CAT: MA(1,0)
+# substrate: S = [H2O2]
+S   <- 5 # arbitrary value chosen to try the MMs function 
+P   <- 0 # No products
+I   <- 0 # No inhibitors
+k   <- 0.0879 # kCAT
+Keq <- 0 # No
+Ki  <- 0  # No inhibitors
+phi_CAT <- MA(S, P, I, k, Keq, Ki)
+
+# Example for phi_GPx: MM(2,0) # BIZARD DE NE PAS AVOIR DE PRODUITS ICI
+# substrates: S = [H2O2] and [GSH]  /  products: P = [GSSG] 
+k <- 2.3736 # kGPx
+Km <- 65    # KmGGR, KmNGR
+S <- 5 # arbitrary value chosen to try the MMs function
+phi_PRPP <- MM(S, k, Km)
+
+
+
+
+
+# Example for phi_PRPP: MM(1,0)
+# substrate: S = [R5P]
+k <- 1 # k_i value in Table S2
+Km <- 65
+S <- 5 # arbitrary value chosen to try the MMs function
+phi_PRPP <- MMs(S, k, Km)
+
+# Example for phi_GR: MM(2,0)
+# Substrates: S1 = [NADPH], S2 = [GSSG]
+k <- 49 #( k_GR value in Table S2
+Km <- c(65, 8.5) # KmN_GR and KmG_GR values in Table 2
+S <- c(5, 5) # arbitrary values chosen to try the MMs function
+phi_GR <- MMs(S, k, Km)
+
+# Example for phi_TKT1: MM(2,2)
+# Substrates: S1 = [R5P], S2 = [X5P]
+# Products: P1 = [GAP], P2 = [S7P]
+k <- 1 # k_i value in Table S2
+Km <- 65 # Km_TKT1 ????? (not in Table S2) ?????
+Keq <-1.62 # Keq_TKT1 value in Table S2
+S <- c(5, 5) # arbitrary values chosen to try the MMp function
+P <- c(5, 5) # arbitrary values chosen to try the MMp function
+phi_TKT1 <- MMp(S, P, k, Km, Keq)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
