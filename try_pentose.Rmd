@@ -15,6 +15,8 @@ knitr::opts_chunk$set(echo = TRUE)
 # S. Charles (2022-03-10)
 rm(list = ls())
 library(tidyverse)
+
+library(readxl)
 ```
 
 
@@ -43,6 +45,7 @@ MA <- function(sub, k, produit, inhib, Keq, Ki){
   # Keq: equilibrium constant
   # Ki: Inhibitor constant
   phi <- k * (prod(sub) - (prod(produit) / Keq)) / ( 1 + inhib/Ki )
+  return(phi)
 }
 # /!\ value put by default for P, I, Keq, Ki, in case of the equation is not reversible and has no inhibitors
 
@@ -73,6 +76,33 @@ MM_GPx_GR <- function(sub, k, Km, Un){
   return(phi)
 }
 
+# MICHAELIS MENTEN LAW
+MM_6PGD <- function(sub, k, Km, produit, inhib, Ki){
+  # time: vector of time points
+  # sub : matrix of substrat concentration (time)
+  # produit : vector of n products concentration
+  # inhib: vector of inhibitor
+  # k: constant max
+  # Km: vector of MM constants
+  # Keq: equilibrium constant
+  # Ki: Inhibitor constant
+  phi <- k * (prod(sub))  / (1 + (prod(sub)+prod(produit))/Km + sum(inhib)/Ki)
+  return(phi)
+}
+
+MA_GAPD <- function(sub, k, produit, inhib, Ki){
+  # time: vector of time points
+  # sub : matrix of substrat concentration (time)
+  # produit : vector of n products concentration
+  # inhib: vector of inhibitor
+  # k: constant max
+  # Km: vector of MM constants 
+  # Keq: equilibrium constant
+  # Ki: Inhibitor constant
+  phi <- k * prod(sub) / ( 1 + inhib[1]/(Ki * (inhib[2]/ (inhib[2]+ 2*inhib[3]))))
+  return(phi)
+}
+
 ## Constant (need ?)
 CONST <- function(k){
   return(k)
@@ -83,7 +113,7 @@ CONST <- function(k){
 
 ### Diffusion
 Variation of de [substrat]
-```{r}
+```{r, eval=FALSE}
 # Diffusion 
 substrat <- seq(1,1000) # x
 res <- sapply(substrat,DIFF,C2 = 5, k = 82.1486, kdiff=0.2016)#y
@@ -98,7 +128,7 @@ rm(res, substrat)
 Graph 1 : More the external concentration is more the coefficiant (Cext-Cin) is higher = quick the H202 go inside the cell. Like in this graph => always positif, we have always the H202 that go inside the cell.Red ligne show the initial condition chose by the article
 
 Variation of le kdiff
-```{r}
+```{r, eval=FALSE}
 # Diffusion 
 substrat <- seq(0.01, 0.4, by=0.01) # x
 res <- sapply(substrat,DIFF,C1= 500, C2 = 5, k = 82.1486) # y
@@ -115,7 +145,7 @@ Graph 2 ; more k diff is higher, quick the H20 go inside the cell
 ### Mass action
 
 Exemple with NNH who is MA(1,0)
-```{r}
+```{r, eval=FALSE}
 # MA
 substrat <- seq(1,1000) # x
 res <- sapply(substrat, MA, k = 4.2345 , produit = 0, inhib=0, Keq=1, Ki=1)#y
@@ -126,7 +156,7 @@ rm(res, substrat)
 ```
 
 # Reactions
-```{r}
+```{r, eval=FALSE}
 # Example for phi_OX: T
 # substrate: S = [H2O2]ext
 k       <- 82.1486
@@ -159,54 +189,84 @@ print(phi_PRPP)
 ```
 # Modeling the system
 
-## phi
-```{r}
-c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0)
-length(c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
-```
 
 ## Differencial equation
 
-matrice de stochiométrie
+matrice stochiometrie
 ```{r}
 sys_sto_ode <- c(c(1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), c(0,0,-2,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0), c(0,0,0,-1,1,-1,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,-1,0,0,0,0,0,0,0,0,1,-1,0,0,0,0,0,0),c(0,0,0,0,0,0,1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),c(0,0,0,0,0,0,0,1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0), c(0,0,0,0,0,0,0,0,1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0), c(0,0,0,0,0,0,0,0,0,0,1,0,-1,0,-1,0,0,0,0,0,0,0,0), c(0,0,0,0,0,0,0,0,0,1,0,-1,-1,0,0,0,0,0,0,0,0,0,0), c(0,0,0,0,0,0,0,0,0,0,0,0,1,-1,0,0,0,0,0,0,0,0,0), c(0,0,0,0,0,0,0,0,0,0,0,0,0,1,-1,0,0,0,0,0,0,0,0), c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,0,0,0,0,0,1,0),c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,-1,0,0,0,0,1),c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,-1,0,0,0,0),c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,-1,0,0,0),c(0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,1,1,-1,0,-1),c(0,0,1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0),c(0,0,0,1,-1,1,-1,0,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0))
 name_equa_diff <- c("H2O2","GSH","NADPH","G6P","6PGL","6PG","Ru5P","X5P","R5P","S7P","E4P","GLC","F6P","FBP","DHAP","GAP","GSSG","NADPp")
 name_phi       <- c("phi_OX","phi_CAT","phi_GPx","phi_GR","phi_NNH","phi_NHN","phi_G6PD","phi_6PGL","phi_6PGD","phi_RPI","phi_RPE","phi_PRPP","phi_TKT1","phi_TLD","phi_TKT2","phi_HK","phi_PGI","phi_PFK","phi_ALD","phi_TPI","phi_GAPD","phi_GLU","phi_TAL")
-head(sys_sto_ode)
+
 mat_stochio <- matrix(sys_sto_ode, nrow=23)
+
 colnames(mat_stochio) <- name_equa_diff
 rownames(mat_stochio) <- name_phi
+
 mat_stochio_equadiff <- t(mat_stochio)
+
 head(mat_stochio_equadiff)
 ```
-metabolite vector
+import parameter table 
 ```{r}
-syst <- function(t,y,parameter,matrix_syst){
-  dy <- c(
-    DIFF(500, x[1], 82.1486, 0.2016),
-    MA(sub=x[1], k=0.0879, produit=0, inhib=0, Keq=1, Ki=1),
-    MM_GPx_GR(sub=c(x[1],x[2]), k=2.3736, Km=c(0.0099,26.687), Un=0),
-    MM_GPx_GR(sub=c(x[17],x[3]), k=400.959, Km=c(564.417,1.389), Un=1),
-    MA(sub=x[18], k=4.2345, produit=0, inhib=0, Keq=1, Ki=1),
-    MA(sub=x[18], k=0.0604, produit=0, inhib=x[1], Keq=1, Ki=351.156),
-    MA(sub=c(x[4],x[18]), k=1.8574, produit=0, inhib=x[3], Keq=1, Ki=58762.0),
-    MA(sub=x[5], k=10.0046, produit=0, inhib=0, Keq=1, Ki=1),   
+parameters_table <- read_excel("parameters.xlsx")
+parameters<-as.numeric(as.vector(t(parameters_table[,4])))
+length(parameters)
+```
+Import initial consentration
+```{r}
+init_table <- read_excel("init.xlsx")
+init<-as.numeric(as.vector(t(init_table[,2])))
+length(init)
+```
 
-    
-    MM(sub=c(x[1],x[2]), k, Km, produit, Keq, inhib, Ki)
-  )
+
+## Creation of the system
+```{r}
+syst <- function(t, y, parameters, msys){
   
+  # PHI
+  Phi <- matrix(c(
+    DIFF(parameters[3], y[1], parameters[1], parameters[2]),
+    MA(sub=y[1], k=parameters[4], produit=0, inhib=0, Keq=1, Ki=1),
+    MM_GPx_GR(sub=c(y[1],y[2]), k=parameters[5], Km=c(parameters[6],parameters[7]), Un=0),
+    MM_GPx_GR(sub=c(y[17],y[3]), k=parameters[8], Km=c(parameters[9],parameters[10]), Un=1),
+    MA(sub=y[18], k=parameters[11], produit=0, inhib=0, Keq=1, Ki=1),
+    MA(sub=y[18], k=parameters[12], produit=0, inhib=y[1], Keq=1, Ki=parameters[13]),
+    MA(sub=c(y[4],y[18]), k=parameters[14], produit=0, inhib=y[3], Keq=1, Ki=parameters[15]),
+    MA(sub=y[5], k=parameters[16], produit=0, inhib=0, Keq=1, Ki=1), 
+    MM_6PGD(sub=c(y[6],y[18]), k=parameters[17], Km=parameters[18], produit=y[6], inhib=y[3], Ki=parameters[19]),
+    MA(sub=y[7], k=parameters[20], produit=y[9], inhib=0, Keq=parameters[21], Ki=1), 
+    MA(sub=y[7], k=parameters[22], produit=y[8], inhib=0, Keq=parameters[23], Ki=1),
+    MM(sub=c(y[9]), k=parameters[24], Km=parameters[25], produit=0, Keq=1, inhib=0, Ki=1),
+    MM(sub=c(y[9],y[8]), k=parameters[26], Km=parameters[27], produit=c(y[16],y[10]), Keq=parameters[28], inhib=0, Ki=1),
+    MM(sub=c(y[16],y[10]), k=parameters[29], Km=parameters[30], produit=c(y[13],y[11]), Keq=parameters[31], inhib=0, Ki=1),
+    MM(sub=c(y[11],y[8]), k=parameters[32], Km=parameters[33], produit=c(y[13],y[16]), Keq=parameters[34], inhib=0, Ki=1),
+    MA(sub=y[12], k=parameters[35], produit=0, inhib=y[16], Keq=1, Ki=parameters[36]),
+    MA(sub=y[4], k=parameters[37], produit=y[13], inhib=y[6], Keq=parameters[38], Ki=parameters[39]),
+    MA(sub=y[13], k=parameters[40], produit=0, inhib=0, Keq=1, Ki=1) - MA(sub=y[14], k=parameters[41], produit=0, inhib=0, Keq=1, Ki=1),
+    MA(sub=y[14], k=parameters[42], produit=c(y[15],y[16]), inhib=0, Keq=parameters[43], Ki=1),
+    MA(sub=y[15], k=parameters[44], produit=y[16], inhib=0, Keq=parameters[45], Ki=1),
+    MA_GAPD(sub=y[16], k=parameters[46], produit=0, inhib=c(y[1],y[2],y[17]), Ki=parameters[47]),
+    parameters[49],
+    MM(sub=c(y[10],y[16]), k=parameters[50], Km=parameters[52], produit=c(y[13],y[16]), Keq=parameters[51], inhib=0, Ki=1)
+  ))
+  dy <- msys %*% Phi
+  
+  
+  return(list(as.vector(dy)))
 }
 ```
 
 
-Parameter Table
+# Modelisation
 ```{r}
+time <- seq(0, 100, by=0.1)
+solution <- lsoda(y = init, times = time, func = syst, parms = parameters, msys= mat_stochio_equadiff)
   
 ```
 
-matrice phi
 ```{r}
-
+plot(solution[,1], solution[,2])
 ```
 
