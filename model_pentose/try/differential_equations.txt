@@ -1,0 +1,16 @@
+dH2O2dt = phiOx - phiCat - phiGPx; 
+dGSHdt = 2 phiGphi - 2 phiGPx;
+dNADPHdt = phiG6PD + phi6PGD + phiNNH - phiNHN - phiGphi; 
+dG6Pdt = phiHK - phiG6PD - phiPGI; 
+d6PGLdt = phiG6PD - phi6PGL; 
+d6PGdt = phi6PGL - phi6PGD; 
+dRu5Pdt = phi6PGD - phiphiPI - phiphiPE; 
+dX5Pdt = phiphiPE - phiTKT1 - phiTKT2; 
+dR5Pdt = phiphiPI - phiTKT1 - phiPphiPP; 
+dS7Pdt = phiTKT1 - phiTLD; 
+dE4Pdt = phiTLD - phiTKT2; 
+dGLCdt = phiGLU - phiHK; 
+dF6Pdt = phiPGI - phiPFK + phiTAL + phiTKT2; 
+dFBPdt = phiPFK - phiALD; 
+dDHAPdt = phiALD - phiTPI; 
+dGAPdt = phALD + phiTKT1 - phiTAL + phiTKT2 + phiTPI - phiGAPD;
