@@ -19,6 +19,7 @@ library(deSolve)
 library(readxl)
 library(ggplot2)
 library(dplyr)
+library(phaseR)
 ```
 
 
@@ -64,22 +65,22 @@ MM <- function(sub, k, Km, produit, Keq, inhib, Ki){
   phi <- k * (prod(sub) - prod(produit)/Keq) / (1 + (prod(sub)+prod(produit))/Km + sum(inhib)/Ki)
   return(phi)
 }
-                ## PARTICULAR FONCTION ##
+                ## PARTICULAR FUNCTION ##
 ## GPx / GR
 
-# MICHAELIS MENTEN LAW
+
 MM_GPx_GR <- function(sub, k, Km, Un){
   # time: vector of time points
   # sub : matrix of substrat concentration (time)
   # k: constant max
   # Km: vector of MM constants
   # Un: if Un == 0 : GPx AND if Un == 1 : GR
-  phi <- k * (prod(sub)) / (Un + sum(sub/Km)) # need to have the S in the same order than Km
+  phi <- k / (Un + Km[1]/sub[1] + Km[2]/sub[2]) # need to have the S in the same order than Km
   return(phi)
 }
 
-# MICHAELIS MENTEN LAW
-MM_6PGD <- function(sub, k, Km, produit, inhib, Ki){
+
+MM_6PGD <- function(sub, k, Km, inhib, Ki){
   # time: vector of time points
   # sub : matrix of substrat concentration (time)
   # produit : vector of n products concentration
@@ -105,91 +106,7 @@ MA_GAPD <- function(sub, k, produit, inhib, Ki){
   return(phi)
 }
 
-## Constant (need ?)
-CONST <- function(k){
-  return(k)
-}
 ```
-
-## Function study
-
-### Diffusion
-Variation of de [substrat]
-```{r, eval=FALSE}
-# Diffusion 
-substrat <- seq(1,1000) # x
-res <- sapply(substrat,DIFF,C2 = 5, k = 82.1486, kdiff=0.2016)#y
-
-plot(x = substrat, y = res, main = "Exemple of the Diffusion function with Cext changing", xlab= "External Consentration", ylab= "Law rate dS/dt", las=1, type="l")
-# Start condition
-segments(x0 = 500, y0 = 0, x1 = 500, y1 = res[500], col = "red", lty = "dotted") 
-segments(x0 = 0, y0 = res[500], x1 = 500, y1 = res[500], col = "red", lty = "dotted")
-head(res)
-rm(res, substrat)
-```
-Graph 1 : More the external concentration is more the coefficiant (Cext-Cin) is higher = quick the H202 go inside the cell. Like in this graph => always positif, we have always the H202 that go inside the cell.Red ligne show the initial condition chose by the article
-
-Variation of le kdiff
-```{r, eval=FALSE}
-# Diffusion 
-substrat <- seq(0.01, 0.4, by=0.01) # x
-res <- sapply(substrat,DIFF,C1= 500, C2 = 5, k = 82.1486) # y
-
-plot(x = substrat, y = res, main = "Exemple of the Diffusion function with k diff changing", xlab= "k diff", ylab= "Law rate dS/dt", las=1, type="l")
-# Start condition
-segments(x0 = 0.2016, y0 = 0, x1 = 0.2016, y1 = res[20], col = "red", lty = "dotted") 
-segments(x0 = 0, y0 = res[20], x1 = 0.2016, y1 = res[20], col = "red", lty = "dotted")
-head(res)
-rm(res, substrat)
-```
-Graph 2 ; more k diff is higher, quick the H20 go inside the cell
-
-### Mass action
-
-Exemple with NNH who is MA(1,0)
-```{r, eval=FALSE}
-# MA
-substrat <- seq(1,1000) # x
-res <- sapply(substrat, MA, k = 4.2345 , produit = 0, inhib=0, Keq=1, Ki=1)#y
-
-plot(x = substrat, y = res, main = "Exemple of the Diffusion function with concentration changing", xlab= "Consentration", ylab= "Law rate dS/dt", las=1, type="l")
-head(res)
-rm(res, substrat)
-```
-
-# Reactions
-```{r, eval=FALSE}
-# Example for phi_OX: T
-# substrate: S = [H2O2]ext
-k       <- 82.1486
-kdiff   <- 0.2016
-H202ext <- 500 # Only this metabolite consentration is a constant
-S       <- 5 # arbitrary value chosen to try the MMs function
-phi_OX <- DIFF(H202ext, S, k, kdiff)
-
-# Example for phi_CAT: MA(1,0)
-# substrate: S = [H2O2]
-sub     <- 5 # arbitrary value chosen to try the MMs function 
-produit <- 0 # No products
-inhib   <- 0 # No inhibitors
-k   <- 0.0879 # kCAT
-Keq <- 1 # No
-Ki  <- 1  # No inhibitors
-phi_CAT <- MA(sub, k, produit, inhib, Keq, Ki)
-
-# Example for phi_GPx: MM(2,0)
-# substrates: S = [H2O2] and [GSH]  /  products: P = [GSSG] 
-sub     <- c(2,5) # arbitrary value chosen to try the MMs function 
-k <- 2.3736 # kGPx
-Km <- 65    # KmGGR, KmNGR
-sub <- 5 # arbitrary value chosen to try the MMs function
-phi_PRPP <- MM_GPx_GR(sub, k, Km, Un=0)
-
-print(phi_OX)
-print(phi_CAT)
-print(phi_PRPP)
-```
-# Modeling the system
 
 
 ## Differencial equation
@@ -255,7 +172,6 @@ syst <- function(t, y, parameters, msys){
   ))
   dy <- msys %*% Phi
   
-  
   return(list(as.vector(dy)))
 }
 ```
@@ -263,58 +179,64 @@ syst <- function(t, y, parameters, msys){
 
 # Modelisation
 ```{r}
-time <- seq(0, 100, by=0.002)
+time <- seq(0, 100, by=0.001)
 solution <- lsoda(y = init, times = time, func = syst, parms = parameters, msys= mat_stochio_equadiff)
 ```
+
+
 
 
 ```{r}
 length(solution)
 ```
 
-log scale
-```{r}
-solution_log <- solution[,-c(1)]
-```
-
-model
-```{r, echo=FALSE}
-recupm <- read_excel("try_model_pentose_pathway_article/model_article.xlsx")
-#recupm <- read_excel("22-03-17_MODEL.xlsx")
-```
-
-
-```{r, echo=FALSE}
-mmodel <- as.data.frame(mutate_all(recupm, function(x) as.numeric(as.character(x)))) # transform table into numeric values
-```
-
-
+## Graphics estimation model
 ```{r}
 for (i in seq(2,length(name_equa_diff)+1)){
   plot(x=solution[,1], y=log10(solution[,i]), type = "l", main = paste("Concentration of", name_equa_diff[i-1]), xlab = "time (s)", ylab = "Concentration log",las=1)
   grid()
   }
 ```
+
+
+
+
+
+
+**
+model
+```{r, echo=FALSE}
+recupm <- read_excel("model_article.xlsx")
+```
+
+
+```{r, echo=FALSE}
+mmodel <- as.data.frame(mutate_all(recupm, function(x) as.numeric(as.character(x)))) # transform table into numeric values
+```
 ```{r}
-for (i in seq(2,length(name_equa_diff)+1)){
-  plot(x=mmodel[,1], y=log10(mmodel[,i]), type = "l", main = paste("Concentration of", name_equa_diff[i-1]), xlab = "time (s)", ylab = "Concentration log",las=1, ylim=c(-1.5,4))
-  }
+typeof(mmodel)
+```
+```{r, eval=FALSE,echo=FALSE}
+plot(x=mmodel[,1], y=log10(mmodel[,2]), type = "l", main = paste("Concentration of", name_equa_diff[2-1]), xlab = "time (s)", ylab = "Concentration log",las=1)
+
+plot(x=solution[,1], y=solution[,2], type = "l", main = paste("Concentration of", name_equa_diff[2-1]), xlab = "time (s)", ylab = "Concentration log",las=1, ylim = c(0,1.6))
+lines(x=mmodel[,1], y=log10(mmodel[,2]),col ="red")
 ```
 
 ```{r}
-png(filename = "toto.png", res = 300, units = "cm", width = 20, height = 25)
-par(mfrow = c(5, 4))
+for (i in seq(2,length(name_equa_diff)+1)){
+  plot(x=mmodel[,1], y=log10(mmodel[,i]), type = "l", main = paste("Concentration of", name_equa_diff[i-1]), xlab = "time (s)", ylab = "Concentration log",las=1)
+}
+```
+
+** together
+
+```{r}
 for (i in seq(2,length(name_equa_diff)+1)){
   #plot(x=solution[,1], y=log10(solution[,i]), type = "l", main = paste("Concentration of", name_equa_diff[i-1]), xlab = "time (s)", ylab = "Concentration log",las=1, ylim= c(min(log10(solution[,i]),log10(mmodel[,i])), max(log10(solution[,i]),log10(mmodel[,i]))))
   plot(x=solution[,1], y=log10(solution[,i]), type = "l", main = paste("Concentration of", name_equa_diff[i-1]), xlab = "time (s)", ylab = "Concentration log",las=1,ylim = c(-1,4))
   lines(x=mmodel[,1], y=log10(mmodel[,i]),col ="red")
   grid()
   }
-dev.off()
 ```
-
-
-
-
-
 
