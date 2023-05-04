@@ -1,0 +1,249 @@
+---
+title: "ecoliModel"
+author: "CRISCI Emma"
+date: "2023-05-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Data from PERES Sabine
+
+# Library
+```{r}
+rm(list = ls())
+#library(xlsx)
+library(openxlsx)
+library(xml2)
+library(XML)
+library("methods")
+```
+
+
+# Data Import
+
+## Parameters import
+```{r}
+# Définir le nom du fichier xlsx
+file <- "param_ecoli_2023.xlsx"
+
+# Lire les noms des feuilles du fichier xls
+sheets <- getSheetNames(file)
+
+# Créer une liste pour stocker les données de chaque feuille
+parametersData <- list()
+
+# Boucle pour parcourir toutes les feuilles du fichier
+for (i in 1:length(sheets)) {
+  
+  # Charger les données de la feuille i dans un dataframe
+  df <- read.xlsx(file, sheet = sheets[i], colNames = FALSE)
+  
+  # Ajouter le dataframe à la liste de données
+  parametersData[[i]] <- df
+}
+```
+```{r}
+names(parametersData)<-sheets
+```
+
+## XML Import
+
+```{r}
+# Read the xml file
+ecoliData <- read_xml("ccm_ross.xml")
+ecoliData
+```
+
+
+Other way to have different organisation of data
+```{r}
+ecoliData_xml <- xmlParse("ccm_ross.xml")
+```
+
+```{r}
+xml_data <- xmlToList(ecoliData_xml)  
+print(xml_data) 
+```
+
+```{r}
+(xml_data$model$listOfCompartments[[2]])
+```
+
+
+## Explication des cinétiques
+
+```{r}
+reactDiff<-c("ex-co2","ex-etoh","ex-o2") # quand ces réactifs sont présent en réactifs alors c'est une loi de diffusion sinon c'est MM généralisé
+```
+
+# Fonction de cinétiques utilisées
+```{r}
+## Diffusion kinetic ##
+
+# Cext : concentration out
+# Cin : concentation in
+# kdiff : diffusion constant
+r_diffusion <- function(Cext,Cin,kdiff){
+  return((Cext-Cin)*kdiff)
+}
+
+
+## Michaelis-Menten Global ##
+
+# kcat (value couple) : c(kcat+, kcat-) kinetic constant
+# keq  : kinetic constant
+# substrat  : vector of the substrat name of the reaction
+# product  : vector of the product name of the reaction
+# stochio_substrat : vector of the stochiometric of substrat
+# stochio_product : vector of the stochiometric of product
+
+MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit){
+  return(keq* (kcat[1]*prod((substrat/km_substrat)^stochio_substrat)-kcat[2]*prod((product/km_product)^stochio_product))/(1 + prod((substrat/km_substrat)^stochio_substrat)+ prod((product/km_product)^stochio_product)))
+}
+```
+
+
+# Extractions Of the data
+## essais sur le jeu de data
+
+```{r}
+
+(xml_data$model$listOfCompartments[[2]])
+```
+
+
+Récupération de tous les noms de variables
+```{r}
+essai<-(xml_data$model$listOfSpecies[[1]][[2]])
+```
+
+
+```{r}
+# Détermination du nombre de métabolites
+nombreMetabo <- as.numeric(length(xml_data$model$listOfSpecies)) # 60 métabolites
+nombreReact <- as.numeric(length(xml_data$model$listOfReactions)) # 57 réactions
+
+# Récupération du nom des métabolites
+metaboliteName <-c() # name
+metaboliteNameMatrix <-c() # id # ATTENTION Dans les réaction on retrouve l'id et pas le nom exacte !!!!
+for (i in seq(nombreMetabo)){
+  metaboliteName <-c(metaboliteName,xml_data$model$listOfSpecies[[i]][[2]])
+  metaboliteNameMatrix <-c(metaboliteNameMatrix,xml_data$model$listOfSpecies[[i]][[1]])
+
+}
+(metaboliteName)
+(metaboliteNameMatrix)
+```
+# Matrice de Stochiométrie
+```{r}
+# Initialistion de la matrice 
+
+# Avec en ligne l'id des molécules et en colones le nom de la réaction
+matrix_sto_ode <- matrix(0,nrow = nombreMetabo, ncol = nombreReact)
+colnames(matrix_sto_ode) <- as.character(1:nombreReact)
+rownames(matrix_sto_ode) <- metaboliteNameMatrix
+
+#matrix_sto_ode['M_ACETATE_ext',1] <- 5
+```
+
+```{r}
+# Remplissage de la matrice 
+print(nombreReact)
+```
+
+
+```{r}
+# Pour chaque réaction 
+for (numReact in seq(nombreReact)){
+  #print(numReact)
+  # Récupération des ## Substrats ##
+  for (reactant in seq(length(xml_data$model$listOfReactions[[numReact]][[1]]))){
+    #print(reactant)
+    # Pour chaque réactant :
+    
+    # on récupère l'id et la stochiométrie
+    nameReactant <- as.character(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[1]]) # id de la molécule (avec m_ devant)
+    stochioReactant <- - as.numeric(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[2]])
+    
+    #print(nameReactant)
+    #print(stochioReactant)
+    #print("")
+    
+    # Ajout dans la matrice
+    matrix_sto_ode[nameReactant,numReact] <-  stochioReactant # Attention Signe négatif car ici on consome la molécule
+  }
+  
+    # Récupération des ## PRODUITS ##
+  for (reactant in seq(length(xml_data$model$listOfReactions[[numReact]][[2]]))){
+    # Pour chaque réactant :
+    
+    # on récupère l'id et la stochiométrie
+    nameReactant <- as.character(xml_data$model$listOfReactions[[numReact]][[2]][[reactant]][[1]]) # id de la molécule (avec m_ devant)
+    stochioReactant <- as.numeric(xml_data$model$listOfReactions[[numReact]][[2]][[reactant]][[2]])
+    
+    # Ajout dans la matrice
+    matrix_sto_ode[nameReactant,numReact] <- stochioReactant
+  }
+}
+
+```
+
+```{r}
+(xml_data$model$listOfReactions[[1]][[2]])
+
+(xml_data$model$listOfReactions[[1]][[1]][[1]][[1]]) # id de la molécule (avec m_ devant)
+(xml_data$model$listOfReactions[[1]][[1]][[1]][[2]]) # stochio
+```
+
+
+# Écriture du système
+```{r}
+nrow(matrix_sto_ode)
+```
+```{r}
+matrix_phi <- matrix(0,nrow = nrow(matrix_sto_ode))
+```
+
+ICI : essayer de coder avec la fonction ODE et voir si on peut conserver parameter comme il est actuellement sous forme de liste :)
+```{r}
+syst <- function(t,y,parameters, matrix_sto_ode){
+  
+  # Construction des Phi
+  # Initialisation de la matrice
+  matrix_phi <- matrix(0,nrow = nrow(matrix_sto_ode))
+  
+  # Remplissage de la matrice 
+  for (numReact in seq(nombreReact)){
+    # pour chaque réaction on lui assigne un phi
+    
+    # 1. récupérer les informations sur cette réaction.
+    
+    # Récupération des id des substrats
+    # Récupération des id des Produits 
+    
+    # 2. à partir des informations sélectionner les Paramètres nécessaires pour l'équation
+    
+    
+    
+    # 3. Attribuer la bonne équation
+    # si présente ext-ATP => c'est de la diffusion
+    # sinon classique avec MM_G
+
+    matrix_phi[numReact,1] <- MM_G(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit)
+  }
+  
+  
+}
+```
+
+
+
+
+
+
+
+
+
