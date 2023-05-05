@@ -153,7 +153,7 @@ for (i in seq(nombreReact)){
 
 # Avec en ligne l'id des molécules et en colones le nom de la réaction
 matrix_sto_ode <- matrix(0,nrow = nombreMetabo, ncol = nombreReact)
-colnames(matrix_sto_ode) <- as.character(1:nombreReact)
+colnames(matrix_sto_ode) <- enzymeName
 rownames(matrix_sto_ode) <- metaboliteNameMatrix
 
 #matrix_sto_ode['M_ACETATE_ext',1] <- 5
@@ -225,33 +225,9 @@ reactDiff <- paste(reactDiff,"_ext",sep="")
 ```
 
 
-## essais
-```{r}
-dataEssais <- parametersData$diffusion
-(dataEssais)
-tryessais<- subset(x = dataEssais,X1=="ex_CO2")
-valeurRecherchee <- essai[[2]]
-
-(subset(parametersData$diffusion,X1=="ex_CO2")[[2]])
-```
-```{r}
-a<-"M_CO2_ext"
-b<- string_replacements(a,list("_ext",""))
-b <- gsub("_ext","",a)
-bbis <- gsub("M_","",b)
-(gsub("_ext","",gsub("M_","",a)))
-```
-##
-
-```{r}
-y= c(1,2,25,25)
-
-which(metaboliteNameMatrix==nameCint)
-```
 
 
-
-ICI : essayer de coder avec la fonction ODE et voir si on peut conserver parameter comme il est actuellement sous forme de liste :)
+# Implémentation fonction syst
 ```{r}
 syst <- function(t,y,parameters, matrix_sto_ode){
   
@@ -259,12 +235,15 @@ syst <- function(t,y,parameters, matrix_sto_ode){
   
   # Initialisation de la matrice
   matrix_phi <- matrix(0,nrow = nrow(matrix_sto_ode))
-  
+  nomMetaboCte <-
   # Remplissage de la matrice 
   for (numReact in seq(nombreReact)){
     # pour chaque réaction on lui assigne un phi
     
     ## 1. récupérer les informations sur cette réaction. ##
+    
+    # Paramètres constants => restent constants => VOIR LA REPONSE DE SABINE SINON REATRIBUER A Y[1:7] les valeur du excel à chaque tour
+    
     
 
 
@@ -305,11 +284,11 @@ syst <- function(t,y,parameters, matrix_sto_ode){
       # stochio_substrat : vector of the stochiometric of substrat
       # stochio_product : vector of the stochiometric of product
       
-      nomReaction <- gsub("R_","",reactionName[numReact]) # id de la réaction : R_ack => nom de l'enzyme
+      nomEnzyme <- gsub("R_","",reactionName[numReact]) # id de la réaction : R_ack => nom de l'enzyme 
       
       # Recherche des valeurs 
-      kcat <- c(subset(parametersData$kcat,X1==nomReaction)[[2]],subset(parametersData$kcat,X1==nomReaction)[[3]])
-      keq  <- subset(parametersData$keq,X1==nomReaction)[[2]]
+      kcat <- c(subset(parametersData$kcat,X1==nomEnzyme)[[2]],subset(parametersData$kcat,X1==nomEnzyme)[[3]])
+      keq  <- subset(parametersData$keq,X1==nomEnzyme)[[2]]
       
       
       substrat <- y[which(metaboliteNameMatrix==r_substrats)] # on cherche le numéro de réactif, r_substrats,r_produits donne le nom.
@@ -317,12 +296,16 @@ syst <- function(t,y,parameters, matrix_sto_ode){
       
       km_substrat <- c()
       for (sub in r_substrats){
-        km_substrat <- c(km_substrat,subset(parametersData$km,X1==sub)[[2]])
+        reelSubstractName <- gsub("M_","",sub)
+        namekm <- paste("km_" ,paste(nomEnyme,reelSubstractName,sep="_"),sep="")
+        km_substrat <- c(km_substrat,subset(parametersData$km,X1==namekm)[[2]])
       }
       
       km_product  <- c()
       for (prod in r_produits){
-        km_product  <- c(km_product,subset(parametersData$km,X1==prod)[[2]])
+        reelProduitName <- gsub("M_","",prod)
+        namekm <- paste("km_" ,paste(nomEnyme,reelProduitName,sep="_"),sep="")
+        km_product  <- c(km_product,subset(parametersData$km,X1==namekm)[[2]])
       }
       
       stochio_substrat <- r_stochioSub
@@ -367,6 +350,17 @@ syst <- function(t,y,parameters, matrix_sto_ode){
   return(list(as.vector(dy)))
 }
 ```
+
+# modélisation
+
+```{r}
+time <- seq(0, 100, by=0.002)
+```
+
+```{r}
+solutionODElsoda <- ode(y = init,method = "lsoda", times = time, func = syst, parms = parameters, msys= mat_stochio_equadiff)
+```
+
 
 
 
