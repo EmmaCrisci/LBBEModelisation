@@ -235,7 +235,6 @@ mmodel <- as.data.frame(mutate_all(recupm, function(x) as.numeric(as.character(x
 ### Comparaison
 ```{r}
 for (i in seq(2,length(name_equa_diff)+1)){
-  #plot(x=solution[,1], y=log10(solution[,i]), type = "l", main = paste("Concentration of", name_equa_diff[i-1]), xlab = "time (s)", ylab = "Concentration log",las=1, ylim= c(min(log10(solution[,i]),log10(mmodel[,i])), max(log10(solution[,i]),log10(mmodel[,i]))))
   plot(x=solution[,1], y=log10(solution[,i]), type = "l", main = paste("Concentration of", name_equa_diff[i-1]), xlab = "time (s)", ylab = "Concentration log",las=1,ylim = c(-1,4))
   lines(x=mmodel[,1], y=log10(mmodel[,i]),col ="red")
   grid()
