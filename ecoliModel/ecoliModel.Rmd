@@ -379,7 +379,12 @@ syst <- function(t,y,parameters, msys){
       nameCext      <- c(interSub, interProd) # on cherche le nom de la constante en utilisant les résultats des intersections type : M_CO2_ext
       print("nameCext")
       print(nameCext)
-      nameCint      <- c(setdiff(r_produits,r_substrats),setdiff(r_substrats,r_produits)) # on utilise U pour avoir l'autre réactif type : M_ADP
+      
+      nameCint      <- c(setdiff(r_produits,nameCext),setdiff(r_substrats,nameCext)) # on utilise U pour avoir l'autre réactif type : M_ADP
+      print("nom des autres réactifs")
+      print(r_produits)
+      print(r_substrats)
+      print(nameCint)
       nameParaDiff  <- paste("ex_", gsub("_ext","",gsub("M_","",nameCext)), sep="")
       
 
