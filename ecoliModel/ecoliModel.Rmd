@@ -20,6 +20,7 @@ library(xml2)
 library(XML)
 library("methods")
 library(DIZtools)
+library(deSolve)
 ```
 
 
@@ -34,7 +35,7 @@ file <- "param_ecoli_2023.xlsx"
 sheets <- getSheetNames(file)
 
 # Créer une liste pour stocker les données de chaque feuille
-parametersData <- list()
+parameters <- list()
 
 # Boucle pour parcourir toutes les feuilles du fichier
 for (i in 1:length(sheets)) {
@@ -43,11 +44,11 @@ for (i in 1:length(sheets)) {
   df <- read.xlsx(file, sheet = sheets[i], colNames = FALSE)
   
   # Ajouter le dataframe à la liste de données
-  parametersData[[i]] <- df
+  parameters[[i]] <- df
 }
 ```
 ```{r}
-names(parametersData)<-sheets
+names(parameters)<-sheets
 ```
 
 ## XML Import
@@ -98,7 +99,7 @@ r_diffusion <- function(Cext,Cin,kdiff){
 # stochio_substrat : vector of the stochiometric of substrat
 # stochio_product : vector of the stochiometric of product
 
-MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit){
+MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
   return(keq* (kcat[1]*prod((substrat/km_substrat)^stochio_substrat)-kcat[2]*prod((product/km_product)^stochio_product))/(1 + prod((substrat/km_substrat)^stochio_substrat)+ prod((product/km_product)^stochio_product)))
 }
 ```
@@ -217,7 +218,7 @@ C <- c("react4")
 
 # Déterminer les réactions de diffusion 
 ```{r}
-nomReactDiff <- gsub("ex_","",parametersData$diffusion$X1) # "CO2"  "ETOH" "O2"  
+nomReactDiff <- gsub("ex_","",parameters$diffusion$X1) # "CO2"  "ETOH" "O2"  
 # quand ces id deréactifs sont présent en réactifs alors c'est une loi de diffusion sinon c'est MM généralisé
 
 reactDiff <- paste("M_",nomReactDiff,sep="")
@@ -229,13 +230,12 @@ reactDiff <- paste(reactDiff,"_ext",sep="")
 
 # Implémentation fonction syst
 ```{r}
-syst <- function(t,y,parameters, matrix_sto_ode){
+syst <- function(t,y,parameters, msys){
   
   # Construction des Phi
   
   # Initialisation de la matrice
-  matrix_phi <- matrix(0,nrow = nrow(matrix_sto_ode))
-  nomMetaboCte <-
+  matrix_phi <- matrix(0,nrow = nrow(msys))
   # Remplissage de la matrice 
   for (numReact in seq(nombreReact)){
     # pour chaque réaction on lui assigne un phi
@@ -253,7 +253,7 @@ syst <- function(t,y,parameters, matrix_sto_ode){
     for (reactant in seq(length(xml_data$model$listOfReactions[[numReact]][[1]]))){
         # on récupère l'id 
       r_substrats  <- c(r_substrats, as.character(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[1]])) # id de la molécule (avec M_ devant)
-      r_stochioSub <- c(r_stochioSub, as.character(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[2]])) # stochio
+      r_stochioSub <- c(r_stochioSub, as.numeric(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[2]])) # stochio
     }
   
     # Récupération des ## PRODUITS ##
@@ -264,7 +264,7 @@ syst <- function(t,y,parameters, matrix_sto_ode){
     
       # on récupère l'id 
       r_produits    <- c(r_produits, as.character(xml_data$model$listOfReactions[[numReact]][[2]][[reactant]][[1]])) # id de la molécule (avec m_ devant)
-      r_stochioProd <- c(r_stochioProd , as.character(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[2]]))
+      r_stochioProd <- c(r_stochioProd , as.numeric(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[2]]))
 
     }
     
@@ -287,8 +287,8 @@ syst <- function(t,y,parameters, matrix_sto_ode){
       nomEnzyme <- gsub("R_","",reactionName[numReact]) # id de la réaction : R_ack => nom de l'enzyme 
       
       # Recherche des valeurs 
-      kcat <- c(subset(parametersData$kcat,X1==nomEnzyme)[[2]],subset(parametersData$kcat,X1==nomEnzyme)[[3]])
-      keq  <- subset(parametersData$keq,X1==nomEnzyme)[[2]]
+      kcat <- c(as.numeric(subset(parameters$kcat,X1==nomEnzyme)[[2]]),as.numeric(subset(parameters$kcat,X1==nomEnzyme)[[3]]))
+      keq  <- as.numeric(subset(parameters$keq,X1==nomEnzyme)[[2]])
       
       
       substrat <- y[which(metaboliteNameMatrix==r_substrats)] # on cherche le numéro de réactif, r_substrats,r_produits donne le nom.
@@ -297,15 +297,15 @@ syst <- function(t,y,parameters, matrix_sto_ode){
       km_substrat <- c()
       for (sub in r_substrats){
         reelSubstractName <- gsub("M_","",sub)
-        namekm <- paste("km_" ,paste(nomEnyme,reelSubstractName,sep="_"),sep="")
-        km_substrat <- c(km_substrat,subset(parametersData$km,X1==namekm)[[2]])
+        namekm            <- paste("km_" ,paste(nomEnzyme,reelSubstractName,sep="_"),sep="")
+        km_substrat       <- c(km_substrat,as.numeric(subset(parameters$km,X1==namekm)[[2]]))
       }
       
       km_product  <- c()
       for (prod in r_produits){
         reelProduitName <- gsub("M_","",prod)
-        namekm <- paste("km_" ,paste(nomEnyme,reelProduitName,sep="_"),sep="")
-        km_product  <- c(km_product,subset(parametersData$km,X1==namekm)[[2]])
+        namekm          <- paste("km_" ,paste(nomEnzyme,reelProduitName,sep="_"),sep="")
+        km_product      <- c(km_product,as.numeric(subset(parameters$km,X1==namekm)[[2]]))
       }
       
       stochio_substrat <- r_stochioSub
@@ -327,14 +327,14 @@ syst <- function(t,y,parameters, matrix_sto_ode){
       # kdiff : diffusion constant
       
       # Recherche des noms des réactifs
-      nameCext <- c(interSub, interProd) # on cherche le nom de la constante en utilisant les résultats des intersections type : M_CO2_ext
-      nameCint <- c(setdiff(r_produits,r_substrats),setdiff(r_substrats,r_produits)) # on utilise U pour avoir l'autre réactif type : M_ADP
-      nameParaDiff <- paste("ex_", gsub("_ext","",gsub("M_","",nameCext)), sep="")
+      nameCext      <- c(interSub, interProd) # on cherche le nom de la constante en utilisant les résultats des intersections type : M_CO2_ext
+      nameCint      <- c(setdiff(r_produits,r_substrats),setdiff(r_substrats,r_produits)) # on utilise U pour avoir l'autre réactif type : M_ADP
+      nameParaDiff  <- paste("ex_", gsub("_ext","",gsub("M_","",nameCext)), sep="")
 
       # On cherche les valeurs des paramètres :
-      valueCext <- subset(parametersData$diffusion,X1==gsub("M_","",nameCext))[[2]] #On va chercher la constante dans la table de données
+      valueCext <- as.numeric(subset(parameters$diffusion,X1==gsub("M_","",nameCext))[[2]] ) #On va chercher la constante dans la table de données
       valueCint <- y[which(metaboliteNameMatrix==nameCint)] # on cherche le numero du métabolitepour assigner x[0], x[...]
-      kdiff <- subset(parametersData$diffusion,X1==nameParaDiff)[[2]] 
+      kdiff     <- as.numeric(subset(parameters$diffusion,X1==nameParaDiff)[[2]] )
       
       # On a tout pour constituer le phi de diffusion : application de la fonction de diffusion
       matrix_phi[numReact,1] <-r_diffusion(valueCext,valueCint,kdiff)
@@ -345,7 +345,7 @@ syst <- function(t,y,parameters, matrix_sto_ode){
   # Fin de la construction de la matrice des Phi
   
   # Mise à jour des équations
-  dy <- matrix_sto_ode %*% matrix_phi
+  dy <- msys %*% matrix_phi
   
   return(list(as.vector(dy)))
 }
@@ -353,12 +353,55 @@ syst <- function(t,y,parameters, matrix_sto_ode){
 
 # modélisation
 
+## Condition initiales
+Essai 1 : on considère que aucun métabolite intérieur ou extérieur est constant 
+
+Importation des données de condition initiales
+```{r}
+# Définir le nom du fichier xlsx
+file <- "init.xlsx"
+
+# Lire les noms des feuilles du fichier xls
+sheets <- getSheetNames(file)
+
+# Créer une liste pour stocker les données de chaque feuille
+initData <- list()
+
+# Boucle pour parcourir toutes les feuilles du fichier
+for (i in 1:length(sheets)) {
+  
+  # Charger les données de la feuille i dans un dataframe
+  df <- read.xlsx(file, sheet = sheets[i])
+  
+  # Ajouter le dataframe à la liste de données
+  initData[[i]] <- df
+}
+
+names(initData)<-sheets
+```
+
+Extraction des données intéressantes de condition initiales pour la résolution
+
+On récupère dans l'ordre les concentrations initiales
+```{r}
+init <- c()
+for (metabolite in metaboliteNameMatrix){
+  init <- c(init,as.numeric(subset(initData$Metabolites,Metabolite==gsub("M_","",metabolite))[[2]]))
+}
+```
+
+
+## Time Range
 ```{r}
 time <- seq(0, 100, by=0.002)
 ```
 
+## Resolution
+
+
 ```{r}
-solutionODElsoda <- ode(y = init,method = "lsoda", times = time, func = syst, parms = parameters, msys= mat_stochio_equadiff)
+
+solutionODElsoda <- lsoda(y = init, times = time, func = syst, parms = parameters , msys = matrix_sto_ode)
 ```
 
 
