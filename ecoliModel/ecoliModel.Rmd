@@ -14,7 +14,6 @@ Data from PERES Sabine
 # Library
 ```{r}
 rm(list = ls())
-#library(xlsx)
 library(openxlsx)
 library(xml2)
 library(XML)
@@ -46,20 +45,15 @@ for (i in 1:length(sheets)) {
   # Ajouter le dataframe à la liste de données
   parameters[[i]] <- df
 }
-```
-```{r}
 names(parameters)<-sheets
 ```
 
 ## XML Import
-
 ```{r}
 # Read the xml file
 ecoliData <- read_xml("ccm_ross.xml")
 ecoliData
 ```
-
-
 Other way to have different organisation of data
 ```{r}
 ecoliData_xml <- xmlParse("ccm_ross.xml")
@@ -70,12 +64,8 @@ xml_data <- xmlToList(ecoliData_xml)
 #print(xml_data) 
 ```
 
-```{r}
-(xml_data$model$listOfCompartments[[2]])
-```
-
-
 ## Explication des cinétiques
+
 
 
 # Fonction de cinétiques utilisées
@@ -90,6 +80,7 @@ r_diffusion <- function(Cext,Cin,kdiff){
 }
 
 
+
 ## Michaelis-Menten Global ##
 
 # kcat (value couple) : c(kcat+, kcat-) kinetic constant
@@ -99,36 +90,52 @@ r_diffusion <- function(Cext,Cin,kdiff){
 # stochio_substrat : vector of the stochiometric of substrat
 # stochio_product : vector of the stochiometric of product
 
-MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
-return(keq* (kcat[1]*prod((substrat/km_substrat)^stochio_substrat)-kcat[2]*prod((product/km_product)^stochio_product))/(1 + prod((substrat/km_substrat)^stochio_substrat)+ prod((product/km_product)^stochio_product)))
+
+
+multiplication <- function(A, B, C){
+  # (A/B)^C
+  resultatMultiplication <- (A[1]/B[1])^C[1]
+  if (length(A)==1){
+    return(resultatMultiplication)
+  }
+  else{
+    for (i in seq(2,length(A))){
+    resultatMultiplication <- resultatMultiplication* ((A[i]/B[i])^C[i])
+    }
+    return (resultatMultiplication)
+  }
+  
 }
 
-# MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
-#   numerateur <- keq* (kcat[1]*prod((substrat/km_substrat)^stochio_substrat)-kcat[2]*prod((product/km_product)^stochio_product))
-#   print("numérateur ok")
-#   denominateur <- (1 + prod((substrat/km_substrat)^stochio_substrat)+ prod((product/km_product)^stochio_product))
-#   print("dénominateur ok")
-#   return(numerateur/denominateur)
-# }
-```
+MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
+return(keq* (kcat[1]*multiplication(substrat,km_substrat,stochio_substrat)-kcat[2]*multiplication(product,km_product,stochio_product))/(1 + multiplication(substrat,km_substrat,stochio_substrat)+ multiplication(product,km_product,stochio_product)))
+}
 
-```{r}
-stochio_product <- c(1,2,3)
-product <- c(2,1,4)
-km_product <- c(2,3,8)
-prod((product/km_product)^stochio_product)
-stochio_product[1]
+
+# MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
+# return(keq* (kcat[1]*prod((substrat/km_substrat)^stochio_substrat)-kcat[2]*prod((product/km_product)^stochio_product))/(1 + prod((substrat/km_substrat)^stochio_substrat)+ prod((product/km_product)^stochio_product)))
+# }
+
+MM_G_aide <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
+  numerateur <- keq* (kcat[1]*multiplication(substrat,km_substrat,stochio_substrat)-kcat[2]*multiplication(product,km_product,stochio_product))
+  
+  print("numérateur ok")
+  print(numerateur)
+  print("autres prints")
+  print(kcat[2])
+  print(product)
+  print(km_product)
+  print(stochio_product)
+  print(prod((product/km_product)^stochio_product))
+  denominateur <- (1 + multiplication(substrat,km_substrat,stochio_substrat)+ multiplication(product,km_product,stochio_product))
+  print("dénominateur ok")
+  print(denominateur)
+  return(numerateur/denominateur)
+}
 ```
 
 
 # Extractions Of the data
-## essais sur le jeu de data
-
-```{r}
-
-(xml_data$model$listOfCompartments[[2]])
-```
-
 
 Récupération de tous les noms de variables
 
@@ -146,8 +153,7 @@ for (i in seq(nombreMetabo)){
   metaboliteNameMatrix <-c(metaboliteNameMatrix,xml_data$model$listOfSpecies[[i]][[1]])
 
 }
-(metaboliteName)
-(metaboliteNameMatrix)
+
 
 # Récupération du nom des réactions 
 reactionName <-c() # name
@@ -157,11 +163,6 @@ for (i in seq(nombreReact)){
   enzymeName <-c(enzymeName,xml_data$model$listOfReactions[[i]][[3]][[2]])
 
 }
-(reactionName)
-(enzymeName)
-```
-```{r}
-(xml_data$model$listOfReactions[[1]][[3]][[1]])
 
 ```
 
@@ -174,7 +175,6 @@ matrix_sto_ode <- matrix(0,nrow = nombreMetabo, ncol = nombreReact)
 colnames(matrix_sto_ode) <- enzymeName
 rownames(matrix_sto_ode) <- metaboliteNameMatrix
 
-#matrix_sto_ode['M_ACETATE_ext',1] <- 5
 ```
 
 ```{r}
@@ -228,188 +228,147 @@ reactDiff <- paste("M_",nomReactDiff,sep="")
 reactDiff <- paste(reactDiff,"_ext",sep="")
 ```
 
-
-```{r}
-xml_data$model$listOfReactions[[5]][[2]]
-```
-
-
-```{r}
-xml_data$model$listOfReactions[[4]][[2]]
-```
-
-
-
-
 # Implémentation fonction syst
 ```{r}
 syst <- function(t,y,parameters, msys){
   
-  # Construction des Phi
+  # Construction de la matrice des phi :
+  print("concentration Y")
+  print(y)
   
-  # Initialisation de la matrice
+  # 1.Initialisation de la matrice
+  
+  # La matrice phi est un vecteur colonne de longueur du nombre de réaction (57)
   matrix_phi <- matrix(0,nrow = ncol(msys)) # correspond au nombre de reactions
-  # Remplissage de la matrice 
+  
+  # 2.Remplissage de la matrice 
   for (numReact in seq(nombreReact)){
-    # pour chaque réaction on lui assigne un phi
+    # pour chaque réaction on lui assigne une valeur de phi
 
-    print("Numéro de réaction")
-    print(numReact)
-    ## 1. récupérer les informations sur cette réaction. ##
+
+    ## A.Récupérer les informations sur cette réaction. ##
     
-    # Paramètres constants => restent constants => VOIR LA REPONSE DE SABINE SINON REATRIBUER A Y[1:7] les valeurs du excel à chaque tour
 
-    # Récupération des ## Substrats ##
+    ## Nom id Substrats + Stochiométrie ##
     r_substrats  = c()
     r_stochioSub = c()
     for (reactant in seq(length(xml_data$model$listOfReactions[[numReact]][[1]]))){
-        # on récupère l'id 
       r_substrats  <- c(r_substrats, as.character(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[1]])) # id de la molécule (avec M_ devant)
       r_stochioSub <- c(r_stochioSub, as.numeric(xml_data$model$listOfReactions[[numReact]][[1]][[reactant]][[2]])) # stochio
     }
-    #print("Nom des substrats")
-    #print(r_substrats)
-    # Récupération des ## PRODUITS ##
+
+    ## Nom id PRODUITS + Stochiométrie ##
     r_produits    = c()
     r_stochioProd = c()
     for (reactant in seq(length(xml_data$model$listOfReactions[[numReact]][[2]]))){
-    # Pour chaque réactant :
-      # on récupère l'id 
-      #print("Numéro de réactant")
-      #print(reactant)
       r_produits    <- c(r_produits, as.character(xml_data$model$listOfReactions[[numReact]][[2]][[reactant]][[1]])) # id de la molécule (avec m_ devant)
-      #print("passage 3")
       r_stochioProd <- c(r_stochioProd , as.numeric(xml_data$model$listOfReactions[[numReact]][[2]][[reactant]][[2]]))
-
     }
 
     
-    # Détermination du type d'équation à utiliser suivant les cas : on regarde si on retrouve reactDiff
+    # B.Détermination du type d'équation à utiliser suivant les cas : on regarde si c'est une diffusion
     interSub  <- intersect(r_substrats,reactDiff)
     interProd <- intersect(r_produits,reactDiff)
     
-    #print("passage 4")
     if (is.empty(interProd) & is.empty(interSub)){
-      print("MM_G")
+      # print("MM_G")
       # Si on est pas dans un cas ou il y a de la diffusion alors on a un MM généralisé
       
       ## Michaelis Menten Kinetics ##
       
-      # kcat (value couple) : c(kcat+, kcat-) kinetic constant
-      # keq  : kinetic constant
-      # substrat  : vector of the substrat name of the reaction
-      # product  : vector of the product name of the reaction
-      # stochio_substrat : vector of the stochiometric of substrat
-      # stochio_product : vector of the stochiometric of product
-      
+      # a) Récupération du nom de l'enzyme
       nomEnzyme <- gsub("R_","",reactionName[numReact]) # id de la réaction : R_ack => nom de l'enzyme 
-      print("Nom Enzyme")
-      print(nomEnzyme)
+      # print("Nom Enzyme")
+      # print(nomEnzyme)
       
-      # Recherche des valeurs 
+      # b) Récupération des valeurs nécessaires
+      
+      # - Les Constantes :
       kcat <- c(as.numeric(subset(parameters$kcat,X1==nomEnzyme)[[2]]),as.numeric(subset(parameters$kcat,X1==nomEnzyme)[[3]]))
       keq  <- as.numeric(subset(parameters$keq,X1==nomEnzyme)[[2]])
-      # print("rechercher des kcat et keq finie")
-      # print("kcat et keq")
-      # print(kcat)
-      # print(keq)
-      print("Nom des substrats et Produits")
-      print(r_substrats)
-      print(r_produits)
-      
-      substrat <- y[match(r_substrats,metaboliteNameMatrix)] # on cherche le numéro de réactif, r_substrats,r_produits donne le nom.
-      product  <- y[match(r_produits,metaboliteNameMatrix)]
-      
-      ##
-      # print("Valeur des substrats et produits pour Y")
-      # print(substrat)
-      # print(product)
-      ##
       
       km_substrat <- c()
       for (sub in r_substrats){
-        # print("ICI")
-        # print(sub)
         reelSubstractName <- gsub("M_","",sub)
         namekm            <- paste("km_" ,paste(nomEnzyme,reelSubstractName,sep="_"),sep="")
-        #print(namekm)
         km_substrat       <- c(km_substrat,as.numeric(subset(parameters$km,X1==namekm)[[2]]))
-        #print(as.numeric(subset(parameters$km,X1==namekm)[[2]]))
       }
       km_product  <- c()
       for (prod in r_produits){
-        # print("ICI")
-        # print(prod)
         reelProduitName <- gsub("M_","",prod)
         namekm          <- paste("km_" ,paste(nomEnzyme,reelProduitName,sep="_"),sep="")
-        #print(namekm)
         km_product      <- c(km_product,as.numeric(subset(parameters$km,X1==namekm)[[2]]))
-        #print(as.numeric(subset(parameters$km,X1==namekm)[[2]]))
-
       }
-      print("Valeur des km")
-      print(km_substrat)
-      print(km_product)
       
       stochio_substrat <- r_stochioSub
       stochio_produit  <- r_stochioProd
+
+      # - Les Métabolites :
+      substrat <- y[match(r_substrats,metaboliteNameMatrix)] # on cherche le numéro de réactif, r_substrats,r_produits donne le nom.
+      product  <- y[match(r_produits,metaboliteNameMatrix)]
       
-      print("Valeur Stochiométrie")
-      print(stochio_substrat)
-      print(stochio_produit)
-      # on a tous les éléments pour appeller a fonction
-           
+      # c)Application de la fonction MM_G
       matrix_phi[numReact,1] <-MM_G(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit)
-      print("fin application à la matrice")
-      view(matrix_phi)
+      if (numReact==7){
+        print("réaction 7")
+#       print(nomEnzyme)
+# 
+#         print(kcat)
+#         print(class(kcat))
+#         print(keq)
+#         print(class(keq))
+#         print(substrat)
+#         print(class(substrat))
+#         print(product)
+#         print(class(product))
+#         print(km_substrat)
+#         print(class(km_substrat))
+#         print(km_product)
+#         print(class(km_product))
+#         print(stochio_substrat)
+#         print(class(stochio_substrat))
+#         print(stochio_produit)
+#         print(class(stochio_produit))
+        print(MM_G_aide(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit))
+        print(matrix_phi[numReact,1])
+      }
     }
     else{
       # on est dans le cas où on a une diffusion car on le retrouve dans la liste des réactifs avec une diffusion
-      print("Diffusion")
+      # print("Diffusion")
       
       ## Diffusion kinetic ##
 
-      # Cext : concentration out
-      # Cin : concentation in
-      # kdiff : diffusion constant
-      print("intersection")
-      print(interSub)
-      print(interProd)
-      # Recherche des noms des réactifs
+      # a)Recherche des noms 
       nameCext      <- c(interSub, interProd) # on cherche le nom de la constante en utilisant les résultats des intersections type : M_CO2_ext
-      print("nameCext")
-      print(nameCext)
       
       nameCint      <- c(setdiff(r_produits,nameCext),setdiff(r_substrats,nameCext)) # on utilise U pour avoir l'autre réactif type : M_ADP
-      print("nom des autres réactifs")
-      print(r_produits)
-      print(r_substrats)
-      print(nameCint)
       nameParaDiff  <- paste("ex_", gsub("_ext","",gsub("M_","",nameCext)), sep="")
       
 
-      # On cherche les valeurs des paramètres :
+      # b) Valeur des constantes et des métabolites
       
+      # - Métabolites :
       valueCext <- y[match(nameCext,metaboliteNameMatrix)] # on va chercher le bon y
-      
       # valueCext <- as.numeric(subset(parameters$ext,X1==gsub("M_","",nameCext))[[2]] ) #On va chercher la constante dans la table de données # SI CONSTANTE 
       valueCint <- y[match(nameCint,metaboliteNameMatrix)] # on cherche le numero du métabolitepour assigner x[0], x[...]
+      
+      # - Constantes :
       kdiff     <- as.numeric(subset(parameters$diffusion,X1==nameParaDiff)[[2]] )
       
-      print("Valeurs de la fonction")
-      print(valueCext)
-      print(valueCint)
-      print(kdiff)
-      # On a tout pour constituer le phi de diffusion : application de la fonction de diffusion
+      # c) Application de la fonction de diffusion
       matrix_phi[numReact,1] <-r_diffusion(valueCext,valueCint,kdiff)
       
     }
   }
-  
-  # Fin de la construction de la matrice des Phi
+  print("Matrice des flux")
+  print(matrix_phi)
   
   # Mise à jour des équations
   dy <- msys %*% matrix_phi
+  
+  print("Mise à jour des va")
+  print(dy)
   
   return(list(as.vector(dy)))
 }
@@ -469,13 +428,8 @@ time <- seq(0, 100, by=0.02)
 ## Resolution
 
 ```{r}
-xml_data$model$listOfReactions[[5]][[1]][[1]]
-```
-
-
-```{r}
-
-solutionODElsoda <- lsoda(y = init, times = time, func = syst, parms = parameters , msys = matrix_sto_ode)
+solutionODElsoda <- ode(y = init,method = "lsoda", times = time, func = syst, parms = parameters, msys= matrix_sto_ode)
+#solutionODElsoda <- lsoda(y = init, times = time, func = syst, parms = parameters , msys = matrix_sto_ode)
 ```
 
 
