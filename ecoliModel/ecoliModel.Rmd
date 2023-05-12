@@ -22,6 +22,10 @@ library(DIZtools)
 library(deSolve)
 ```
 
+```{r}
+-9.000100e-01^68.88
+```
+
 
 # Data Import
 
@@ -48,6 +52,26 @@ for (i in 1:length(sheets)) {
 names(parameters)<-sheets
 ```
 
+rajout de : 
+km_atp_synth_H2O
+km_biomass_H
+km_biomass_P
+km_biomass_H2O
+km_csn_H2O
+km_csn_H
+km_gap_P
+km_gap_H
+km_gdh_H2O
+km_gln_P
+km_mdh_H
+km_me_NADP
+km_me_NADPH
+km_pfk_H
+km_pcc_H2O
+km_pcc_P
+km_pyk_H
+km_scs_P
+km_zwf_H
 ## XML Import
 ```{r}
 # Read the xml file
@@ -107,31 +131,65 @@ multiplication <- function(A, B, C){
   
 }
 
-MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
-return(keq* (kcat[1]*multiplication(substrat,km_substrat,stochio_substrat)-kcat[2]*multiplication(product,km_product,stochio_product))/(1 + multiplication(substrat,km_substrat,stochio_substrat)+ multiplication(product,km_product,stochio_product)))
-}
-
-
-# MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
-# return(keq* (kcat[1]*prod((substrat/km_substrat)^stochio_substrat)-kcat[2]*prod((product/km_product)^stochio_product))/(1 + prod((substrat/km_substrat)^stochio_substrat)+ prod((product/km_product)^stochio_product)))
+#MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
+# return(keq* (kcat[1]*multiplication(substrat,km_substrat,stochio_substrat)-kcat[2]*multiplication(product,km_product,stochio_product))/(1 + multiplication(substrat,km_substrat,stochio_substrat)+ multiplication(product,km_product,stochio_product)))
 # }
 
+
+MM_G <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
+return(keq* (kcat[1]*prod((substrat/km_substrat)^{stochio_substrat})-kcat[2]*prod((product/km_product)^{stochio_product}))/(1 + prod((substrat/km_substrat)^{stochio_substrat})+ prod((product/km_product)^{stochio_product})))
+}
+
 MM_G_aide <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
-  numerateur <- keq* (kcat[1]*multiplication(substrat,km_substrat,stochio_substrat)-kcat[2]*multiplication(product,km_product,stochio_product))
+  numerateur <- keq* (kcat[1]*prod((substrat/km_substrat)^{stochio_substrat})-kcat[2]*prod((product/km_product)^{stochio_product}))
   
   print("numérateur ok")
   print(numerateur)
-  print("autres prints")
-  print(kcat[2])
-  print(product)
-  print(km_product)
-  print(stochio_product)
-  print(prod((product/km_product)^stochio_product))
-  denominateur <- (1 + multiplication(substrat,km_substrat,stochio_substrat)+ multiplication(product,km_product,stochio_product))
+
+  
+  denominateur <- (1 + prod((substrat/km_substrat)^{stochio_substrat})+ prod((product/km_product)^{stochio_product}))
+  
   print("dénominateur ok")
   print(denominateur)
+  print("autres prints")
+  # print(product)
+  # print(km_product)
+  # print(stochio_product)
+  # print("________")
+  # print((product/km_product)^{stochio_product})
+  # print(product/km_product)
+  # print(prod((product/km_product)^{stochio_product}))
+  # print("____#____")
+  print(substrat)
+  print(km_substrat)
+  print(stochio_substrat)
+  print("________")
+  print((substrat[2]/km_substrat[2])^2)
+  print(2^stochio_substrat[2])
+  print(substrat/km_substrat)
+  print((substrat/km_substrat)^{stochio_substrat})
+  print(prod((substrat/km_substrat)^{stochio_substrat}))
+  print("________")
+  
   return(numerateur/denominateur)
 }
+
+# MM_G_aide <- function(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_product){
+#   numerateur <- keq* (kcat[1]*multiplication(substrat,km_substrat,stochio_substrat)-kcat[2]*multiplication(product,km_product,stochio_product))
+#   
+#   print("numérateur ok")
+#   print(numerateur)
+#   print("autres prints")
+#   #print(kcat[2])
+#   print(product)
+#   print(km_product)
+#   print(stochio_product)
+#   print(prod((product/km_product)^{stochio_product}))
+#   denominateur <- (1 + multiplication(substrat,km_substrat,stochio_substrat)+ multiplication(product,km_product,stochio_product))
+#   print("dénominateur ok")
+#   print(denominateur)
+#   return(numerateur/denominateur)
+# }
 ```
 
 
@@ -214,6 +272,9 @@ for (numReact in seq(nombreReact)){
 ```
 
 
+```{r}
+rep(1,3)
+```
 
 
 # Écriture du système
@@ -308,30 +369,16 @@ syst <- function(t,y,parameters, msys){
       product  <- y[match(r_produits,metaboliteNameMatrix)]
       
       # c)Application de la fonction MM_G
-      matrix_phi[numReact,1] <-MM_G(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit)
       if (numReact==7){
-        print("réaction 7")
-#       print(nomEnzyme)
-# 
-#         print(kcat)
-#         print(class(kcat))
-#         print(keq)
-#         print(class(keq))
-#         print(substrat)
-#         print(class(substrat))
-#         print(product)
-#         print(class(product))
-#         print(km_substrat)
-#         print(class(km_substrat))
-#         print(km_product)
-#         print(class(km_product))
-#         print(stochio_substrat)
-#         print(class(stochio_substrat))
-#         print(stochio_produit)
-#         print(class(stochio_produit))
-        print(MM_G_aide(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit))
-        print(matrix_phi[numReact,1])
+        stochio_substrat <- rep(1,length(stochio_substrat))
+        stochio_produit  <- rep(1,length(stochio_produit))
+
       }
+      if (numReact==9){
+        print(MM_G_aide(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit))
+      }
+      matrix_phi[numReact,1] <-MM_G(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit)
+
     }
     else{
       # on est dans le cas où on a une diffusion car on le retrouve dans la liste des réactifs avec une diffusion
@@ -422,13 +469,13 @@ rownames(initview)<- metaboliteNameMatrix
 
 ## Time Range
 ```{r}
-time <- seq(0, 100, by=0.02)
+time <- seq(0, 2   , by=1)
 ```
 
 ## Resolution
 
 ```{r}
-solutionODElsoda <- ode(y = init,method = "lsoda", times = time, func = syst, parms = parameters, msys= matrix_sto_ode)
+solutionODElsoda <- ode(y = init,method = "ode45", times = time, func = syst, parms = parameters, msys= matrix_sto_ode, hini = 3)
 #solutionODElsoda <- lsoda(y = init, times = time, func = syst, parms = parameters , msys = matrix_sto_ode)
 ```
 

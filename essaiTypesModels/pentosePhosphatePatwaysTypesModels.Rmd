@@ -205,7 +205,7 @@ syst <- function(t, y, parameters, msys){
 ## Time range
 
 ```{r}
-time <- seq(0, 100, by=0.002)
+time <- seq(0, 100, by=0.02)
 ```
 
 ## Modelisation Calcul
@@ -246,6 +246,10 @@ for (i in seq(2,length(name_equa_diff)+1)){
 # Comparaison between sevral Desol2 methodes
 
 ## Modelisation calcul
+essais
+```{r}
+mat_stochio_equadiff <- matrix_sto_ode
+```
 
 ```{r}
 solutionODElsoda <- ode(y = init,method = "lsoda", times = time, func = syst, parms = parameters, msys= mat_stochio_equadiff)
