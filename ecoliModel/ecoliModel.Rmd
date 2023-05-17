@@ -160,8 +160,11 @@ MM_G_aide <- function(kcat,keq,substrat, product, km_substrat, km_product, stoch
   # print(product/km_product)
   # print(prod((product/km_product)^{stochio_product}))
   # print("____#____")
+  print("Concentration Substrat")
   print(substrat)
+  print("Km substrat")
   print(km_substrat)
+  print("Stochiometrie substrat")
   print(stochio_substrat)
   print("________")
   print((substrat[2]/km_substrat[2])^2)
@@ -290,13 +293,22 @@ reactDiff <- paste(reactDiff,"_ext",sep="")
 ```
 
 # Implémentation fonction syst
+
 ```{r}
 syst <- function(t,y,parameters, msys){
   
   # Construction de la matrice des phi :
-  print("concentration Y")
-  print(y)
-  
+  # print("concentration Y")
+  # print(y)
+  # if (exists("saveY",mode="special")){
+  #   saveY <- cbind(saveY,as.data.frame(y))
+  # } else {
+  #   saveY <- as.data.frame(y)
+  # }
+  # print("ICI")
+  # print(saveY)
+  # print("ICI")
+  print(y[7])
   # 1.Initialisation de la matrice
   
   # La matrice phi est un vecteur colonne de longueur du nombre de réaction (57)
@@ -369,14 +381,15 @@ syst <- function(t,y,parameters, msys){
       product  <- y[match(r_produits,metaboliteNameMatrix)]
       
       # c)Application de la fonction MM_G
-      if (numReact==7){
-        stochio_substrat <- rep(1,length(stochio_substrat))
-        stochio_produit  <- rep(1,length(stochio_produit))
-
-      }
-      if (numReact==9){
-        print(MM_G_aide(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit))
-      }
+      # if (numReact==7){
+      #  }
+      stochio_substrat <- rep(1,length(stochio_substrat))
+      stochio_produit  <- rep(1,length(stochio_produit))
+      # 
+      # }
+      # if (numReact==9){
+      #   print(MM_G_aide(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit))
+      # }
       matrix_phi[numReact,1] <-MM_G(kcat,keq,substrat, product, km_substrat, km_product, stochio_substrat, stochio_produit)
 
     }
@@ -408,14 +421,14 @@ syst <- function(t,y,parameters, msys){
       
     }
   }
-  print("Matrice des flux")
-  print(matrix_phi)
+  # print("Matrice des flux")
+  # print(matrix_phi)
   
   # Mise à jour des équations
   dy <- msys %*% matrix_phi
   
-  print("Mise à jour des va")
-  print(dy)
+  # print("Mise à jour des va")
+  # print(dy)
   
   return(list(as.vector(dy)))
 }
@@ -469,14 +482,24 @@ rownames(initview)<- metaboliteNameMatrix
 
 ## Time Range
 ```{r}
-time <- seq(0, 2   , by=1)
+time <- seq(0, 4, length.out = 5)
 ```
 
 ## Resolution
 
+Sauvegarde des informations
+# ```{r}
+# saveY <- as.data.frame(1:60)
+# ```
+# 
+# ```{r}
+# saveY[[2]]<- c(2:61)
+# ```
+
+
 ```{r}
-solutionODElsoda <- ode(y = init,method = "ode45", times = time, func = syst, parms = parameters, msys= matrix_sto_ode, hini = 3)
-#solutionODElsoda <- lsoda(y = init, times = time, func = syst, parms = parameters , msys = matrix_sto_ode)
+#solutionODElsoda <- ode(y = init,method = "ode45", times = time, func = syst, parms = parameters, msys= matrix_sto_ode, hini = 3)
+solutionODElsoda <- lsoda(y = init, times = time, func = syst, parms = parameters , msys = matrix_sto_ode)
 ```
 
 

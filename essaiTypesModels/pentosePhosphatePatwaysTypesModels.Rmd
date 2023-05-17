@@ -165,7 +165,7 @@ length(init)
 ## Creation of the system
 ```{r}
 syst <- function(t, y, parameters, msys){
-  
+  print(y[1])
   # PHI
   Phi <- matrix(c(
     DIFF(parameters[3], y[1], parameters[1], parameters[2]),
@@ -205,12 +205,12 @@ syst <- function(t, y, parameters, msys){
 ## Time range
 
 ```{r}
-time <- seq(0, 100, by=0.02)
+time <- seq(0, 100, by=10)
 ```
 
 ## Modelisation Calcul
 ```{r}
-solution <- lsoda(y = init, times = time, func = syst, parms = parameters, msys= mat_stochio_equadiff)
+solution <- lsoda(y = init, times = time, func = syst, parms = parameters, msys= mat_stochio_equadiff, maxsteps = 5)
 ```
 
 ## Visualisation
