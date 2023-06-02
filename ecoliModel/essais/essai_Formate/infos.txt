@@ -1,0 +1,3 @@
+Formate = 20
+H=5
+Formate+H=Hext+Formate_ext

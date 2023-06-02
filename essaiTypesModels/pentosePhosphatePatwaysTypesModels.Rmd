@@ -225,7 +225,7 @@ for (i in seq(2,length(name_equa_diff)+1)){
 
 ### Data Recuperation
 ```{r, echo=FALSE}
-recupm <- read_excel("try_model_pentose_pathway_article/model_article.xlsx")
+recupm <- read_excel("try_model_pentose_pathway_article/model300s.xlsx")
 
 ```
 ```{r, echo=FALSE}

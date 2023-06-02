@@ -1,0 +1,82 @@
+---
+title: "Untitled"
+author: "CRISCI Emma"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyr)
+```
+
+```{r}
+hillf <- function(nH, vmax, S, K){
+  return(vmax*(S)^(nH)/((K)^(nH)+(S)^(nH)))}
+```
+
+```{r}
+S <- seq(0,70,by=0.01)
+K <- 10
+vmax<-5
+```
+
+```{r}
+dataGraph <- as.data.frame(S)
+for (nH in seq(1,6)){
+  dataGraph[[nH+1]]<- hillf(nH, vmax, S, K)
+}
+```
+
+
+```{r}
+colnames(dataGraph)<- c("S","nH1","nH2","nH3","nH4","nH5",'nH6')
+```
+
+```{r}
+prediction2 <- gather(
+  data = dataGraph,
+  key = TYPE,
+  value = 1,2,3,4,5,6
+)
+```
+
+```{r}
+ggplot(
+  dataGraph,
+  aes(x = S)
+) +
+geom_line(aes(y = nH1),color='red') +
+geom_line(aes(y = nH2),color='orange') +
+geom_line(aes(y = nH3),color='darkgreen') +
+geom_line(aes(y = nH4),color='blue') +
+geom_line(aes(y = nH5),color='darkviolet') +
+
+  theme(panel.border = element_blank(),axis.text =element_blank() , ,
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_blank(),axis.ticks=element_blank())+
+  ylab("v")+geom_hline(yintercept=5, color="darkred")
+```
+```{r}
+ggplot(
+  dataGraph,
+  aes(x = S)
+) +
+geom_line(aes(y = nH1),color='red') +
+geom_line(aes(y = nH2),color='orange') +
+geom_line(aes(y = nH3),color='darkgreen') +
+geom_line(aes(y = nH4),color='blue') +
+geom_line(aes(y = nH5),color='darkviolet') +
+
+  theme(panel.border = element_blank(),axis.text =element_blank() , ,
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_blank(),axis.ticks=element_blank())+
+  ylab("v")+geom_hline(yintercept=5, color="darkred")
+```
+

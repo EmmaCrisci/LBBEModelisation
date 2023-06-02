@@ -1,0 +1,5 @@
+ACALD=20
+NADH=5 
+
+ACALD+ H + NADH => EtOH +NAD
+EtOH => EtOH_ext
