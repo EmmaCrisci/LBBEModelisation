@@ -1,0 +1,52 @@
+---
+title:"modificationGraphiques"
+author:"CRISCIEmma"
+date:"`rSys.Date()`"
+output:html_document
+---
+
+```{r setup,include=FALSE}
+knitr::opts_chunk$set(echo=TRUE)
+```
+
+
+```{r library}
+rm(list=ls())
+library(openxlsx)
+library(xml2)
+library(XML)
+library("methods")
+library(DIZtools)
+library(deSolve)
+```
+
+```{r condinitiales}
+#Définirlenomdufichierxlsx
+pathfile <-"essais/100s/"
+
+file <- paste(pathfile,"solutionODElsoda.csv", sep = "")
+sol<- read.csv(file,sep="t",dec=",",fill=TRUE,comment.char="")
+```
+
+```{r}
+nameMetabo <- c("M_ACETATE_ext","M_CO2_ext","M_ETOH_ext","M_FORMATE_ext","M_GLU_ext","M_LACTATE_ext","M_OXY_ext","M_H_ext","M_SUCC_ext","M_H2O","M_P","M_BIOMASS","M_ACALD","M_ACETATE","M_ACETYL_CoA","M_ACETYL_P","M_ADP","M_AKG","M_ATP","M_CITRATE","M_CO2","M_CoA","M_DHAP","M_DPG","M_ERYTH_4_P","M_ETOH","M_FORMATE","M_FRU_6_P","M_FRU_BIS_P","M_FUMARATE","M_GA_3P","M_GLU_6_P","M_GLU_LAC_6_P","M_GLUCO_6_P","M_H","M_ISOCIT","M_KDPG","M_L_glutamate","M_L_glutamine","M_LACTATE","M_MALATE","M_NAD","M_NADH","M_NADP","M_NADPH","M_O2","M_OXALO","M_PEP","M_PG","M_PG3","M_PYR","M_Q8","M_Q8H2","M_RIBOSE_5_P","M_RIBULOSE_5_P","M_SED_7_P","M_SUCC","M_SUCC_CoA","M_XYL_5_P","M_glyoxylate")
+```
+
+```{r}
+colnames(sol) <- c("time",nameMetabo)
+```
+
+
+```{r}
+pathImage <- paste(pathfile,"sanslog10/", sep = "")
+for (i in seq(2,60+1)){
+  print(paste(paste(pathImage,nameMetabo[i-1], sep=""),".jpeg",sep=""))
+  jpeg(file=paste(paste(pathImage,nameMetabo[i-1], sep=""),".jpeg",sep=""))
+  plot(x=sol[,1], y=sol[,i], type = "l", main = paste("Concentration of", nameMetabo[i-1]), xlab = "time (s)", ylab = "Concentration",las=1)
+
+  grid()
+  dev.off()
+  }
+```
+
+
